@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 from torch.nn import init
 from torch.optim import lr_scheduler
-
+from torchvision import transforms, utils, models
+from resnet import BasicBlock, ResNet
 
 #############################################
 #  Functions definition
@@ -376,10 +377,43 @@ class netD_vgg16(nn.Module):
 #############################
 # TODO:resnet-model definition
 #############################
-class netB_resnet(nn.Module):
-    def __init__(self, name):
-        super(netB_resnet, self).__init__()
-        raise NotImplementedError
+class netB_resnet34(nn.Module):
+    def __init__(self):
+        super(netB_resnet34, self).__init__()
+        # self.resnet = models.resnet152(pretrained=True)
+        self.resnet = ResNet(BasicBlock, [3, 4, 6, 3])
 
     def forward(self, x):
-        pass
+        feat = self.resnet(x)
+        return feat
+
+
+class netH_resnet34(nn.Module):
+    def __init__(self):
+        super(netH_resnet34, self).__init__()
+        self.normal = nn.Sequential(
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(256), nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(128), nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(64), nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(64), nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1))
+
+        self.depth = nn.Sequential(
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(256), nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(128), nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(64), nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(64), nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(64, 1, kernel_size=4, stride=2, padding=1))
+
+    def forward(self, x):
+        return {'depth': self.depth(x), 'norm': self.normal(x)}
+
+
+# test resnet
+net_b = netB_resnet34()
+x = net_b(torch.randn(1, 3, 224, 224))
+print(x.size())
+
+net_h = netH_resnet34()
+y = net_h(torch.randn(1, 512, 7, 7))
+print(y['norm'].size())
