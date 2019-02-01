@@ -103,7 +103,7 @@ class Model:
         self.load_dir = os.path.join(cfg['CKPT_PATH'])
 
         if cfg['TEST'] or cfg['RESUME']:
-            self.load_networks(cfg['CKPT_PATH'])
+            self.load_networks(cfg['EPOCH_LOAD'])
 
     def set_input(self, inputs):
         if self.cfg['GRAY']:

@@ -14,6 +14,7 @@ SCENENET_DIR: /home/marsyang/Documents/Dataset/scenenet
 
 RESUME: False
 TEST: False
+EPOCH_LOAD: 0
 CKPT_PATH: outputs
 
 ## Train
@@ -21,7 +22,7 @@ TRAIN: True
 LR: 0.001
 LR_POLICY: multi-step
 LR_DECAY_EP: [18, 27]
-N_EPOCH: 30
+N_EPOCH: 1000
 BATCH_SIZE: 96
 
 ## Optimizers
