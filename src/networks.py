@@ -389,6 +389,26 @@ class netB_resnet34(nn.Module):
         return {'out': feat}
 
 
+# class netB_resnet34(nn.Module):
+#     def __init__(self):
+#         super(netB_resnet34, self).__init__()
+#         resnet34 = models.resnet34(pretrained=True)
+#         self.res34_conv2 = nn.Sequential(*list(resnet34.children())[:-5])
+#         self.res34_conv3 = nn.Sequential(*list(resnet34.children())[-5])
+#         self.res34_conv4 = nn.Sequential(*list(resnet34.children())[-4])
+#         self.res34_conv5 = nn.Sequential(*list(resnet34.children())[-3])
+#         self.res34_fc = nn.Sequential(*list(resnet34.children())[-2:])
+#         for param in self.res34_fc.parameters():
+#             param.requires_grad = False
+#
+#     def forward(self, x):
+#         conv2 = self.res34_conv2(x)
+#         conv3 = self.res34_conv3(conv2)
+#         conv4 = self.res34_conv4(conv3)
+#         conv5 = self.res34_conv5(conv4)
+#         return {'conv2': conv2, 'conv3': conv3, 'conv4': conv4, 'out': conv5}
+
+
 class netH_resnet34(nn.Module):
     def __init__(self):
         super(netH_resnet34, self).__init__()
