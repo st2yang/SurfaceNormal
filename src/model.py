@@ -42,9 +42,8 @@ class Model:
             if self.cfg['USE_DA'] and self.cfg['TRAIN']:
                 self.netD = netD_vgg16(self.cfg['DA_LAYER'])
         elif 'resnet' in cfg['ARCHI']:
-            raise NotImplementedError
-            self.netB = networks.netB_resnet()
-            self.netH = networks.netH_resnet()
+            self.netB = networks.netB_resnet34()
+            self.netH = networks.netH_resnet34()
             if self.cfg['USE_DA'] and self.cfg['TRAIN']:
                 self.netD = networks.netD_resnet(self.cfg['DA_LAYER'])
         else:

@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 from torch.nn import init
 from torch.optim import lr_scheduler
-from torchvision import transforms, utils, models
+from torchvision import models
 from resnet import BasicBlock, ResNet
+
 
 #############################################
 #  Functions definition
@@ -132,8 +133,8 @@ class netB_alexnet(nn.Module):
         feat6 = self.bn6(self.fc6(self.maxpooling5(self.relu5(feat5))))
         feat7 = self.relu7(self.bn7(self.fc7(self.relu6(feat6))))
 
-        return {'conv1':feat1, 'conv2':feat2, 'conv3':feat3, 'conv4':feat4,
-                'conv5':feat5, 'fc6':feat6, 'fc7':feat7, 'out':feat7}
+        return {'conv1': feat1, 'conv2': feat2, 'conv3': feat3, 'conv4': feat4,
+                'conv5': feat5, 'fc6': feat6, 'fc7': feat7, 'out': feat7}
 
 
 class netH_alexnet(nn.Module):
@@ -158,7 +159,7 @@ class netH_alexnet(nn.Module):
         #     nn.ConvTranspose2d(64, 1, kernel_size=3, stride=2))
 
     def forward(self, x):
-        return {'depth':self.depth(x), 'norm':self.normal(x)} # 'edge':self.edge(x), 'norm':self.normal(x)}
+        return {'depth': self.depth(x), 'norm': self.normal(x)} # 'edge':self.edge(x), 'norm':self.normal(x)}
 
 
 class netD_alexnet(nn.Module):
@@ -385,7 +386,7 @@ class netB_resnet34(nn.Module):
 
     def forward(self, x):
         feat = self.resnet(x)
-        return feat
+        return {'out': feat}
 
 
 class netH_resnet34(nn.Module):
@@ -410,10 +411,10 @@ class netH_resnet34(nn.Module):
 
 
 # test resnet
-net_b = netB_resnet34()
-x = net_b(torch.randn(1, 3, 224, 224))
-print(x.size())
-
-net_h = netH_resnet34()
-y = net_h(torch.randn(1, 512, 7, 7))
-print(y['norm'].size())
+# net_b = netB_resnet34()
+# x = net_b(torch.randn(1, 3, 224, 224))
+# print(x['out'].size())
+#
+# net_h = netH_resnet34()
+# y = net_h(torch.randn(1, 512, 7, 7))
+# print(y['norm'].size())

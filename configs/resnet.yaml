@@ -1,0 +1,50 @@
+ARCHI: resnet
+OUTPUT_PATH: outputs
+
+CPU_MODE: False
+GPU_IDS: [0]
+NUM_WORKER: 16
+
+## Input
+GRAY: False
+CROP_SIZE: 224
+TRAIN_FILE: ../data/train_shuffle.txt
+SUNCG_DIR: /workspace/saturnv-game/SUNCG/suncg_image256
+SCENENET_DIR: /home/marsyang/Documents/Dataset/scenenet
+
+RESUME: False
+TEST: False
+CKPT_PATH: outputs
+
+## Train
+TRAIN: True
+LR: 0.001
+LR_POLICY: multi-step
+LR_DECAY_EP: [18, 27]
+N_EPOCH: 30
+BATCH_SIZE: 96
+
+## Optimizers
+# Adam params.
+BETA1: 0.5
+BETA2: 0.999
+# SGD params
+MOMENTUM: 0.9
+WEIGHT_DECAY: 0.0005
+
+## Print settings
+SAVE_FREQ: 2
+PRINT_FREQ: 2
+VIS_FREQ: 10
+
+## Domain Adaptation
+USE_DA: False
+POOL_SIZE: 128
+DA_LAYER: conv5
+REAL_DIR: /workspace/saturnv-game/places/places365_standard_train_1.6m
+
+## Weight for different losses
+DA_WEIGHT: 0.05
+DEP_WEIGHT: 5
+NORM_WEIGHT: 20
+EDGE_WEIGHT: 1
