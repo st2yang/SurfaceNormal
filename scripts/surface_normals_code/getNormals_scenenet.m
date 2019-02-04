@@ -9,7 +9,7 @@ addpath('./utils/');
 % SceneNet RGBD dataset
 data_path = '/home/marsyang/Documents/Dataset/scenenet/train/';
 % 0-16864
-for fld = 175 : 190
+for fld = 211 : 249
     disp(fld)
     first_fld = floor(fld / 1000);
     second_fld = fld;

@@ -8,22 +8,23 @@ NUM_WORKER: 16
 ## Input
 GRAY: False
 CROP_SIZE: 224
-TRAIN_FILE: ../data/train_shuffle.txt
+TRAIN_FILE: ../data/test_shuffle.txt
 SUNCG_DIR: /workspace/saturnv-game/SUNCG/suncg_image256
+# TODO NYUD: /DATA/SyntheticML/nyu_dataset/
 SCENENET_DIR: /home/marsyang/Documents/Dataset/scenenet
 
 RESUME: False
 TEST: False
-EPOCH_LOAD: 0
-CKPT_PATH: outputs
+EPOCH_LOAD: 339 # TODO: choose max when None
+CKPT_PATH: outputs/resnet/2019-02-01_16-56-57
 
 ## Train
-TRAIN: True
+TRAIN: False
 LR: 0.001
 LR_POLICY: multi-step
 LR_DECAY_EP: [18, 27]
-N_EPOCH: 1000
-BATCH_SIZE: 96
+N_EPOCH: 10
+BATCH_SIZE: 1
 
 ## Optimizers
 # Adam params.
@@ -34,8 +35,8 @@ MOMENTUM: 0.9
 WEIGHT_DECAY: 0.0005
 
 ## Print settings
-SAVE_FREQ: 4
-PRINT_FREQ: 10
+SAVE_FREQ: 2
+PRINT_FREQ: 2
 VIS_FREQ: 100
 
 ## Domain Adaptation
@@ -47,5 +48,5 @@ REAL_DIR: /workspace/saturnv-game/places/places365_standard_train_1.6m
 ## Weight for different losses
 DA_WEIGHT: 0.05
 DEP_WEIGHT: 5
-NORM_WEIGHT: 20
+NORM_WEIGHT: 10
 EDGE_WEIGHT: 1

@@ -7,7 +7,7 @@ import argparse
 
 # 0. Loading configuration file
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', type=str, default='../configs/alexnet_eval.yaml', help='Path to the config file.')
+parser.add_argument('--config', type=str, default='../configs/resnet_eval.yaml', help='Path to the config file.')
 opts = parser.parse_args()
 with open(opts.config, 'r') as f_in:
     cfg = yaml.load(f_in)

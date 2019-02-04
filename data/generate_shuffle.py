@@ -4,10 +4,11 @@ import random
 
 data_path = '/home/marsyang/Documents/Dataset/scenenet/train/'
 
-total_fld = 999
+start_fld = 179
+end_fld = 999
 file_names = []
 
-for fld in range(total_fld):
+for fld in range(start_fld, end_fld):
     first_fld = int(np.floor(fld / 1000))
     second_fld = fld
 
@@ -23,7 +24,7 @@ for fld in range(total_fld):
 
 # random.shuffle(file_names)
 
-with open('train_shuffle.txt', 'w') as f:
+with open('test_shuffle.txt', 'w') as f:
     f.writelines("%s\n" % place for place in file_names)
 
 #################################

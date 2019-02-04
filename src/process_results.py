@@ -5,15 +5,26 @@ import time
 import numpy as np
 import matplotlib.pylab as plt
 import os
+import yaml
+import argparse
 
-results_path = '/home/marsyang/Downloads/'
+# Loading configuration file
+parser = argparse.ArgumentParser()
+parser.add_argument('--config', type=str, default='../configs/resnet_eval.yaml', help='Path to the config file.')
+opts = parser.parse_args()
+with open(opts.config, 'r') as f_in:
+    cfg = yaml.load(f_in)
+
+results_path = cfg['CKPT_PATH']
+epoch_num = cfg['EPOCH_LOAD']
+
 angle_error_tol = 45
 show_k = 6
 
 save_dir = os.path.join(results_path, 'save')
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
-results_path = os.path.join(results_path, 'ep31')
+results_path = os.path.join(results_path, 'ep' + str(epoch_num))
 
 pixels = np.array([])
 images_mean = []
@@ -24,7 +35,7 @@ images_path = []
 time_s = time.time()
 if os.path.isdir(results_path):
     for filepath in os.listdir(results_path):
-        if filepath.endswith(".pt"):
+        if filepath.endswith(".pt") and 'norm' in filepath:
             cos_val = 1 - torch.load(os.path.join(results_path, filepath)).cpu().detach().numpy()
             cos_val = np.minimum(cos_val, 1.0)
             cos_val = np.maximum(cos_val, -1.0)
