@@ -41,5 +41,5 @@ while True:
 
     pred = model.forward()
 
-    model.test(count, cfg['CKPT_PATH'] + '/ep' + str(cfg['EPOCH_LOAD']))
+    model.single_test(count, cfg['CKPT_PATH'] + '/ep' + str(cfg['EPOCH_LOAD']))
     count += 1

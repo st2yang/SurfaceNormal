@@ -135,6 +135,7 @@ class Model:
 
     def backward_BH(self):
         ## forward to compute prediction
+        # TODO: replace this with self.head_pred to avoid computation twice
         self.task_pred = self.netH(self.feat_syn['out'])
 
         # depth
@@ -186,55 +187,14 @@ class Model:
         self.loss_D = (self.loss_D_syn + self.loss_D_real) * 0.5
         self.loss_D.backward()
 
-    def test(self, img_num, output_fd):
-        self.forward()
-
-        ## forward to compute prediction
-        self.task_pred = self.netH(self.feat_syn['out'])
-
-        # depth
-        # depth_diff = self.task_pred['depth'] - self.input_syn_dep
-        # _n = self.task_pred['depth'].size(0) * self.task_pred['depth'].size(2) * self.task_pred['depth'].size(3)
-        # loss_depth2 = depth_diff.sum().pow_(2).div_(_n).div_(_n)
-        # loss_depth1 = self.criterionDepth1(self.task_pred['depth'], self.input_syn_dep)
-        # self.loss_dep = self.cfg['DEP_WEIGHT'] * (loss_depth1 - loss_depth2) * 0.5
-
-        # # surface normal
-        ch = self.task_pred['norm'].size(1)
-        _pred = self.task_pred['norm'].permute(0, 2, 3, 1).contiguous().view(-1, ch)
-        _gt = self.input_syn_norm.permute(0, 2, 3, 1).contiguous().view(-1, ch)
-        _gt = (_gt / 127.5) - 1
-        _pred = torch.nn.functional.normalize(_pred, dim=1)
-        self.task_pred['norm'] = _pred.view(self.task_pred['norm'].size(0), self.task_pred['norm'].size(2),
-                                            self.task_pred['norm'].size(3), 3).permute(0, 3, 1, 2)
-        self.task_pred['norm'] = (self.task_pred['norm'] + 1) * 127.5
-        cos_label = torch.ones(_gt.size(0)).to(self.device)
-        # self.loss_norm = self.cfg['NORM_WEIGHT'] * self.criterionNorm(_pred, _gt, cos_label)
-
-        # saving stuffs
-        torch.save(self.criterionNorm(_pred, _gt, cos_label), '%s/%d_norm_diff.pt' % (output_fd, img_num))
-        torch.save((self.task_pred['depth'].exp()- self.input_syn_dep.exp()).abs().mul(1000.0),
-                                            '%s/%d_abs_depth_diff.pt' % (output_fd, img_num))
-        torchvision.utils.save_image(self.input_syn_color.cpu(),
-                                     '%s/%d_color.jpg' % (output_fd, img_num),
-                                     nrow=1, normalize=True)
-        vis_norm = torch.cat((self.input_syn_norm, self.task_pred['norm']), dim=0)
-        torchvision.utils.save_image(vis_norm.detach(),
-                                     '%s/%d_norm.jpg' % (output_fd, img_num),
-                                     nrow=1, normalize=True)
-        # vis_depth = torch.cat((self.input_syn_dep, self.task_pred['depth']), dim=0)
-        torchvision.utils.save_image( self.input_syn_dep.exp().mul(1000.0).cpu(),
-                                     '%s/%d_depth.jpg' % (output_fd, img_num),
-                                     nrow=1, normalize=True)
-        torchvision.utils.save_image(self.task_pred['depth'].exp().mul(1000.0).cpu(),
-                                     '%s/%d_pred_depth.jpg' % (output_fd, img_num),
-                                     nrow=1, normalize=True)
-
     def optimize(self):
         self.total_steps += 1
+        self.netB.train()
+        self.netH.train()
         self.forward()
         # if DA, update on real data
         if self.cfg['USE_DA']:
+            self.netD.train()
             self.set_requires_grad(self.netD, True)
             self.set_requires_grad([self.netB, self.netH], False)
             self.optimizer_D.zero_grad()
@@ -242,8 +202,9 @@ class Model:
             self.optimizer_D.step()
 
         # update on synthetic data
-        self.set_requires_grad([self.netB, self.netH], True)
-        # self.set_requires_grad(self.netD, False)
+        if self.cfg['USE_DA']:
+            self.set_requires_grad([self.netB, self.netH], True)
+            self.set_requires_grad(self.netD, False)
         self.optimizer_B.zero_grad()
         self.optimizer_H.zero_grad()
         self.backward_BH()
@@ -254,13 +215,54 @@ class Model:
     def eval(self):
         self.netB.eval()
         self.netH.eval()
-        # self.netD.eval()
+        if self.cfg['USE_DA']:
+            self.netD.eval()
 
-    # used in test time, wrapping `forward` in no_grad() so we don't save
-    # intermediate steps for backprop
-    # def test(self):
-    #     with torch.no_grad():
-    #         self.forward()
+    def test(self, output_fd):
+        with torch.no_grad():
+            self.forward()
+
+        # surface normal
+        ch = self.head_pred['norm'].size(1)
+        _pred = self.head_pred['norm'].permute(0, 2, 3, 1).contiguous().view(-1, ch)
+        _gt = self.input_syn_norm.permute(0, 2, 3, 1).contiguous().view(-1, ch)
+        _gt = (_gt / 127.5) - 1
+        _pred = torch.nn.functional.normalize(_pred, dim=1)
+        cos_label = torch.ones(_gt.size(0)).to(self.device)
+        norm_diff = self.criterionNorm(_pred, _gt, cos_label)
+
+    def single_test(self, img_num, output_fd):
+        with torch.no_grad():
+            self.forward()
+
+        # surface normal
+        ch = self.head_pred['norm'].size(1)
+        _pred = self.head_pred['norm'].permute(0, 2, 3, 1).contiguous().view(-1, ch)
+        _gt = self.input_syn_norm.permute(0, 2, 3, 1).contiguous().view(-1, ch)
+        _gt = (_gt / 127.5) - 1
+        _pred = torch.nn.functional.normalize(_pred, dim=1)
+        self.head_pred['norm'] = _pred.view(self.head_pred['norm'].size(0), self.head_pred['norm'].size(2),
+                                            self.head_pred['norm'].size(3), 3).permute(0, 3, 1, 2)
+        self.head_pred['norm'] = (self.head_pred['norm'] + 1) * 127.5
+        cos_label = torch.ones(_gt.size(0)).to(self.device)
+
+        # saving stuffs
+        torch.save(self.criterionNorm(_pred, _gt, cos_label), '%s/%d_norm_diff.pt' % (output_fd, img_num))
+        torch.save((self.head_pred['depth'].exp() - self.input_syn_dep.exp()).abs().mul(1000.0),
+                   '%s/%d_abs_depth_diff.pt' % (output_fd, img_num))
+        torchvision.utils.save_image(self.input_syn_color.cpu(),
+                                     '%s/%d_color.jpg' % (output_fd, img_num),
+                                     nrow=1, normalize=True)
+        vis_norm = torch.cat((self.input_syn_norm, self.head_pred['norm']), dim=0)
+        torchvision.utils.save_image(vis_norm.detach(),
+                                     '%s/%d_norm.jpg' % (output_fd, img_num),
+                                     nrow=1, normalize=True)
+        torchvision.utils.save_image(self.input_syn_dep.exp().mul(1000.0).cpu(),
+                                     '%s/%d_depth.jpg' % (output_fd, img_num),
+                                     nrow=1, normalize=True)
+        torchvision.utils.save_image(self.head_pred['depth'].exp().mul(1000.0).cpu(),
+                                     '%s/%d_pred_depth.jpg' % (output_fd, img_num),
+                                     nrow=1, normalize=True)
 
     # update learning rate (called once every epoch)
     def update_learning_rate(self):

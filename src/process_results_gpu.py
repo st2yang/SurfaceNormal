@@ -134,7 +134,7 @@ np.save(os.path.join(save_dir, 'results'), results)
 
 # plots
 fig = plt.figure()
-plt.hist(pixels, bins=100, density=1, cumulative=True)
+plt.hist(pixels, bins=1000, density=1)
 plt.xlim(0, 60)
 plt.ylabel('percentage of pixels')
 plt.xlabel('angle errors')
