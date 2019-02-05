@@ -72,9 +72,9 @@ dataiterator = iter(training_generator)
 
 
 def angle_error_ratio(angle_degree, base_angle_degree):
-    c = torch.gt(base_angle_degree * torch.ones(angle_rad.size(), device=device), angle_degree)
+    c = torch.gt(base_angle_degree * torch.ones(angle_degree.size(), device=device), angle_degree)
     r = torch.sum(c)
-    ratio = torch.div(r, torch.tensor(angle_rad.size()[0] * angle_rad.size()[1], device=device, dtype=torch.float64))
+    ratio = torch.div(r, torch.tensor(angle_degree.size()[0] * angle_degree.size()[1], device=device, dtype=torch.float64))
     return ratio
 
 ratios_11 = []

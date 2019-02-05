@@ -218,7 +218,8 @@ class Model:
         if self.cfg['USE_DA']:
             self.netD.eval()
 
-    def test(self, output_fd):
+    def test(self, output_fd=None):
+        self.eval()
         with torch.no_grad():
             self.forward()
 
@@ -230,6 +231,7 @@ class Model:
         _pred = torch.nn.functional.normalize(_pred, dim=1)
         cos_label = torch.ones(_gt.size(0)).to(self.device)
         norm_diff = self.criterionNorm(_pred, _gt, cos_label)
+        # TODO: to finish test() without saving files
 
     def single_test(self, img_num, output_fd):
         with torch.no_grad():

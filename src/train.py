@@ -21,9 +21,15 @@ if __name__ == '__main__':
     normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[1, 1, 1])
     data_syn = GameDataset(cfg, normalize)
     dataloader_syn = torch.utils.data.DataLoader(data_syn, num_workers=cfg['NUM_WORKER'],
-                batch_size=cfg['BATCH_SIZE'], shuffle=True)
+                                                 batch_size=cfg['BATCH_SIZE'], shuffle=True)
     dataiterator_syn = iter(dataloader_syn)
     print('==> Number of synthetic training images: %d.' % len(data_syn))
+
+    data_test = GameDataset(cfg, normalize, train=False)
+    dataloader_test = torch.utils.data.DataLoader(data_test, num_workers=cfg['NUM_WORKER'],
+                                                  batch_size=cfg['BATCH_SIZE'], shuffle=False)
+    dataiterator_test = iter(dataloader_test)
+    print('==> Number of synthetic test images: %d.' % len(data_test))
 
     if cfg['USE_DA']:
         data_real = torchvision.datasets.ImageFolder(cfg['REAL_DIR'],
@@ -68,6 +74,18 @@ if __name__ == '__main__':
         ## saving
         if (epoch+1) % cfg['SAVE_FREQ'] == 0:
             model.save_networks(epoch)
+            # evaluate the model on the test data
+            test_inputs = {}
+            while True:
+                try:
+                    test_inputs['syn'] = next(dataiterator_test)
+                except StopIteration:
+                    dataiterator_test = iter(dataloader_test)
+                    break
+
+                ## update
+                model.set_input(test_inputs)
+                model.test()
 
     print('==> Finished Training')
     del dataiterator_syn
