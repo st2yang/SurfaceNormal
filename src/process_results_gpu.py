@@ -35,8 +35,8 @@ class Dataset(data.Dataset):
 
         # Load data and get label
         cos_val = 1 - torch.load(os.path.join(self.results_path, norm_file)).cpu().detach().numpy()
-        # cos_val = torch.min(cos_val, 1 + torch.zeros_like(cos_val))
-        # cos_val = torch.max(cos_val, -1.0 + torch.zeros_like(cos_val))
+        cos_val = np.maximum(cos_val, -np.ones_like(cos_val))
+        cos_val = np.minimum(cos_val, np.ones_like(cos_val))
 
         return cos_val
 
@@ -86,6 +86,7 @@ means = []
 
 images_score = np.array([])
 images_mean = np.array([])
+pixels = np.array([])
 
 time_s = time.time()
 
@@ -108,12 +109,14 @@ while True:
         mean = torch.mean(angle_degree)
         means.append(mean.cpu().detach().numpy())
         # image-wise metrics
-        # mean = torch.mean(angle_degree, dim=1)
-        # images_mean = np.append(images_mean, mean.cpu().detach().numpy())
-        # c = torch.gt(angle_error_tol * torch.ones(angle_rad.size(), device=device), angle_degree)
-        # c_img = torch.sum(c, dim=1).double()
-        # score = torch.div(c_img, torch.tensor(angle_rad.size()[1], device=device, dtype=torch.float64))
-        # images_score = np.append(images_score, score.cpu().detach().numpy())
+        mean = torch.mean(angle_degree, dim=1)
+        images_mean = np.append(images_mean, mean.cpu().detach().numpy())
+        c = torch.gt(angle_error_tol * torch.ones(angle_rad.size(), device=device), angle_degree)
+        c_img = torch.sum(c, dim=1).double()
+        score = torch.div(c_img, torch.tensor(angle_rad.size()[1], device=device, dtype=torch.float64))
+        images_score = np.append(images_score, score.cpu().detach().numpy())
+        # process all pixels
+        pixels = np.append(pixels, angle_degree.cpu().detach().numpy())
     except StopIteration:
         break
 
@@ -121,7 +124,7 @@ while True:
 # mean
 results = {}
 results['mean'] = np.average(np.array(means), weights=np.array(batch_sizes))
-# results['median'] = np.median(pixels)
+results['median'] = np.median(pixels)
 results['11.25'] = np.average(np.array(ratios_11), weights=np.array(batch_sizes))
 results['22.5'] = np.average(np.array(ratios_22), weights=np.array(batch_sizes))
 results['30'] = np.average(np.array(ratios_30), weights=np.array(batch_sizes))
@@ -129,34 +132,34 @@ results['45'] = np.average(np.array(ratios_45), weights=np.array(batch_sizes))
 print(results)
 np.save(os.path.join(save_dir, 'results'), results)
 
-# # plots
-# fig = plt.figure()
-# plt.hist(pixels, bins=100, density=1, cumulative=True)
-# plt.xlim(0, 60)
-# plt.ylabel('percentage of pixels')
-# plt.xlabel('angle errors')
-# plt.show()
-# fig.savefig(os.path.join(save_dir, 'pixel.png'))
+# plots
+fig = plt.figure()
+plt.hist(pixels, bins=100, density=1, cumulative=True)
+plt.xlim(0, 60)
+plt.ylabel('percentage of pixels')
+plt.xlabel('angle errors')
+plt.show()
+fig.savefig(os.path.join(save_dir, 'pixel.png'))
 
-# fig = plt.figure()
-# plt.hist(images_mean, bins=100, density=1, cumulative=True)
-# plt.xlim(0, 100)
-# plt.ylabel('percentage of images')
-# plt.xlabel('mean angle errors of image')
-# plt.show()
-# fig.savefig(os.path.join(save_dir, 'image.png'))
-#
-# fig = plt.figure()
-# plt.hist(images_score, bins=100, density=1, cumulative=-1)
-# plt.xlim(0.0, 1)
-# plt.ylabel('percentage of images')
-# plt.xlabel('quality of normal prediction (percents of pixels with error less than 45°)')
-# plt.show()
-# fig.savefig(os.path.join(save_dir, 'quality.png'))
-#
-# # distribution
-# low_k = np.argsort(images_score)[:show_k]
-# high_k = np.argsort(-np.array(images_score))[:show_k]
-#
-# time_f = time.time()
-# print('time', time_f-time_s)
+fig = plt.figure()
+plt.hist(images_mean, bins=100, density=1, cumulative=True)
+plt.xlim(0, 100)
+plt.ylabel('percentage of images')
+plt.xlabel('mean angle errors of image')
+plt.show()
+fig.savefig(os.path.join(save_dir, 'image.png'))
+
+fig = plt.figure()
+plt.hist(images_score, bins=100, density=1, cumulative=-1)
+plt.xlim(0.0, 1)
+plt.ylabel('percentage of images')
+plt.xlabel('quality of normal prediction (percents of pixels with error less than 45°)')
+plt.show()
+fig.savefig(os.path.join(save_dir, 'quality.png'))
+
+# distribution
+low_k = np.argsort(images_score)[:show_k]
+high_k = np.argsort(-np.array(images_score))[:show_k]
+
+time_f = time.time()
+print('time', time_f-time_s)
