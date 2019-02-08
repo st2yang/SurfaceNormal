@@ -52,9 +52,9 @@ class Model:
         ## initialize network param.
         self.netB = networks.init_net(self.netB, cfg['GPU_IDS'], 'xavier')
         self.netH = networks.init_net(self.netH, cfg['GPU_IDS'], 'xavier')
+
         if self.cfg['USE_DA'] and self.cfg['TRAIN']:
             self.netD = networks.init_net(self.netD, cfg['GPU_IDS'], 'xavier')
-        print(self.netB, self.netH) #, self.netD)
 
         # loss, optimizer, and scherduler
         if cfg['TRAIN']:
@@ -101,6 +101,7 @@ class Model:
             self.criterionNorm = torch.nn.CosineEmbeddingLoss(reduction='none').to(self.device)
 
         self.load_dir = os.path.join(cfg['CKPT_PATH'])
+        self.criterionNorm_eval = torch.nn.CosineEmbeddingLoss(reduction='none').to(self.device)
 
         if cfg['TEST'] or cfg['RESUME']:
             self.load_networks(cfg['EPOCH_LOAD'])
@@ -189,12 +190,10 @@ class Model:
 
     def optimize(self):
         self.total_steps += 1
-        self.netB.train()
-        self.netH.train()
+        self.train_mode()
         self.forward()
         # if DA, update on real data
         if self.cfg['USE_DA']:
-            self.netD.train()
             self.set_requires_grad(self.netD, True)
             self.set_requires_grad([self.netB, self.netH], False)
             self.optimizer_D.zero_grad()
@@ -211,60 +210,52 @@ class Model:
         self.optimizer_B.step()
         self.optimizer_H.step()
 
+    def train_mode(self):
+        self.netB.train()
+        self.netH.train()
+        if self.cfg['USE_DA']:
+            self.netD.train()
+
     # make models eval mode during test time
-    def eval(self):
+    def eval_mode(self):
         self.netB.eval()
         self.netH.eval()
         if self.cfg['USE_DA']:
             self.netD.eval()
 
-    def test(self, output_fd=None):
-        self.eval()
+    def angle_error_ratio(self, angle_degree, base_angle_degree):
+        logic_map = torch.gt(base_angle_degree * torch.ones_like(angle_degree, device=self.device), angle_degree)
+        num_pixels = torch.sum(logic_map)
+        ratio = torch.div(num_pixels, torch.tensor(angle_degree.nelement(), device=self.device,
+                          dtype=torch.float64))
+        return ratio, logic_map
+
+    def test(self):
+        self.eval_mode()
         with torch.no_grad():
             self.forward()
 
         # surface normal
+        batch_size = self.head_pred['norm'].size(0)
         ch = self.head_pred['norm'].size(1)
         _pred = self.head_pred['norm'].permute(0, 2, 3, 1).contiguous().view(-1, ch)
         _gt = self.input_syn_norm.permute(0, 2, 3, 1).contiguous().view(-1, ch)
         _gt = (_gt / 127.5) - 1
         _pred = torch.nn.functional.normalize(_pred, dim=1)
+        _gt = torch.nn.functional.normalize(_gt, dim=1)
         cos_label = torch.ones(_gt.size(0)).to(self.device)
-        norm_diff = self.criterionNorm(_pred, _gt, cos_label)
-        # TODO: to finish test() without saving files
+        norm_diff = self.criterionNorm_eval(_pred, _gt, cos_label)
 
-    def single_test(self, img_num, output_fd):
-        with torch.no_grad():
-            self.forward()
+        cos_val = 1 - norm_diff
+        cos_val = torch.max(cos_val, -torch.ones_like(cos_val, device=self.device))
+        cos_val = torch.min(cos_val, torch.ones_like(cos_val, device=self.device))
 
-        # surface normal
-        ch = self.head_pred['norm'].size(1)
-        _pred = self.head_pred['norm'].permute(0, 2, 3, 1).contiguous().view(-1, ch)
-        _gt = self.input_syn_norm.permute(0, 2, 3, 1).contiguous().view(-1, ch)
-        _gt = (_gt / 127.5) - 1
-        _pred = torch.nn.functional.normalize(_pred, dim=1)
-        self.head_pred['norm'] = _pred.view(self.head_pred['norm'].size(0), self.head_pred['norm'].size(2),
-                                            self.head_pred['norm'].size(3), 3).permute(0, 3, 1, 2)
-        self.head_pred['norm'] = (self.head_pred['norm'] + 1) * 127.5
-        cos_label = torch.ones(_gt.size(0)).to(self.device)
+        angle_rad = torch.acos(cos_val)
+        angle_degree = angle_rad / 3.14 * 180
+        # ratio metrics
+        ratio_11, _ = self.angle_error_ratio(angle_degree, 11.25)
 
-        # saving stuffs
-        torch.save(self.criterionNorm(_pred, _gt, cos_label), '%s/%d_norm_diff.pt' % (output_fd, img_num))
-        torch.save((self.head_pred['depth'].exp() - self.input_syn_dep.exp()).abs().mul(1000.0),
-                   '%s/%d_abs_depth_diff.pt' % (output_fd, img_num))
-        torchvision.utils.save_image(self.input_syn_color.cpu(),
-                                     '%s/%d_color.jpg' % (output_fd, img_num),
-                                     nrow=1, normalize=True)
-        vis_norm = torch.cat((self.input_syn_norm, self.head_pred['norm']), dim=0)
-        torchvision.utils.save_image(vis_norm.detach(),
-                                     '%s/%d_norm.jpg' % (output_fd, img_num),
-                                     nrow=1, normalize=True)
-        torchvision.utils.save_image(self.input_syn_dep.exp().mul(1000.0).cpu(),
-                                     '%s/%d_depth.jpg' % (output_fd, img_num),
-                                     nrow=1, normalize=True)
-        torchvision.utils.save_image(self.head_pred['depth'].exp().mul(1000.0).cpu(),
-                                     '%s/%d_pred_depth.jpg' % (output_fd, img_num),
-                                     nrow=1, normalize=True)
+        return {'batch_size': batch_size, 'ratio_11': ratio_11.cpu().detach().numpy()}
 
     # update learning rate (called once every epoch)
     def update_learning_rate(self):
@@ -356,7 +347,7 @@ class Model:
                     # if you are using PyTorch newer than 0.4 (e.g., built from
                     # GitHub source), you can remove str() on self.device
                     state_dict = torch.load(load_path, map_location=str(self.device))
-                net.load_state_dict(state_dict)
+                    net.load_state_dict(state_dict)
 
     # set requies_grad=Fasle to avoid computation
     def set_requires_grad(self, nets, requires_grad=False):

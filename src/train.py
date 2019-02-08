@@ -3,11 +3,10 @@ import argparse
 import torch
 import torchvision
 import time
-
-start = time.time()
-
 from dataset import GameDataset
 from model import Model
+
+start = time.time()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -34,11 +33,11 @@ if __name__ == '__main__':
     if cfg['USE_DA']:
         data_real = torchvision.datasets.ImageFolder(cfg['REAL_DIR'],
                     torchvision.transforms.Compose([
-                        torchvision.transforms.Resize((cfg['CROP_SIZE'],cfg['CROP_SIZE'])),
+                        torchvision.transforms.Resize((cfg['CROP_SIZE'], cfg['CROP_SIZE'])),
                         torchvision.transforms.ToTensor(),
                         normalize]))
         dataloader_real = torch.utils.data.DataLoader(data_real, num_workers=cfg['NUM_WORKER'],
-                        batch_size=cfg['BATCH_SIZE'], shuffle=True)
+                                                      batch_size=cfg['BATCH_SIZE'], shuffle=True)
         dataiterator_real = iter(dataloader_real)
         print('==> Number of real training images: %d.' % len(data_real))
 
@@ -60,7 +59,7 @@ if __name__ == '__main__':
                 try:
                     inputs['real'] = next(dataiterator_real)
                 except StopIteration:
-                    dataiterator_real=iter(dataloader_real)
+                    dataiterator_real= iter(dataloader_real)
                     inputs['real'] = next(dataiterator_real)
 
             ## update
@@ -85,7 +84,7 @@ if __name__ == '__main__':
 
                 ## update
                 model.set_input(test_inputs)
-                model.test()
+                test_results = model.test()
 
     print('==> Finished Training')
     del dataiterator_syn
