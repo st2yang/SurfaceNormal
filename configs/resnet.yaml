@@ -15,16 +15,16 @@ SCENENET_DIR: /home/marsyang/Documents/Dataset/scenenet
 
 RESUME: False
 TEST: False
-EPOCH_LOAD: 0
-CKPT_PATH: outputs
+EPOCH_LOAD: 3
+CKPT_PATH: outputs/resnet/2019-02-08_14-17-19
 
 ## Train
 TRAIN: True
 LR: 0.001
 LR_POLICY: multi-step
 LR_DECAY_EP: [18, 27]
-N_EPOCH: 1000
-BATCH_SIZE: 96
+N_EPOCH: 1
+BATCH_SIZE: 10
 
 ## Optimizers
 # Adam params.
@@ -35,7 +35,7 @@ MOMENTUM: 0.9
 WEIGHT_DECAY: 0.0005
 
 ## Print settings
-SAVE_FREQ: 4
+SAVE_FREQ: 1
 PRINT_FREQ: 10
 VIS_FREQ: 100
 

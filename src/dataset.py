@@ -116,8 +116,8 @@ class GameDataset(torch.utils.data.Dataset):
                 edge_img = io.imread(os.path.join(self.cfg['SCENENET_DIR'], info[1], 'edge', info[2]+'.png'))
                 normal_img = io.imread(os.path.join(self.cfg['SCENENET_DIR'], info[1], 'normal', info[2]+'.png'))
             elif info[0] == 'nyud':
-                color_img = self.nyud['images'][:, :, :, int(info[1])]
-                depth_img = self.nyud['depths'][:, :, int(info[1])]
+                color_img = self.nyud['images'][:, :, :, int(info[1]-1)]
+                depth_img = self.nyud['depths'][:, :, int(info[1]-1)]
                 edge_img = io.imread(os.path.join(self.cfg['NYUD'], 'edges', info[1] + '.png'))
                 normal_img = io.imread(os.path.join(self.cfg['NYUD'], 'normals', info[1] + '.png'))
             else:
@@ -133,7 +133,7 @@ class GameDataset(torch.utils.data.Dataset):
                 break
 
         # TODO Jason: to fix
-        depth_img[depth_img<0] = 0
+        depth_img[depth_img < 0] = 0
         depth_img = np.log(depth_img / 1000. + 1e-8)
 
         sample = {'color': color_img, 'depth': depth_img, 'edge': edge_img, 'edge_pix': edge_c, 'normal': normal_img}

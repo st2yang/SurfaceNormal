@@ -225,7 +225,10 @@ class Model:
 
     def angle_error_ratio(self, angle_degree, base_angle_degree):
         logic_map = torch.gt(base_angle_degree * torch.ones_like(angle_degree, device=self.device), angle_degree)
-        num_pixels = torch.sum(logic_map)
+        if len(logic_map.size()) == 1:
+            num_pixels = torch.sum(logic_map).float()
+        else:
+            num_pixels = torch.sum(logic_map, dim=1).float()
         ratio = torch.div(num_pixels, torch.tensor(angle_degree.nelement(), device=self.device,
                           dtype=torch.float64))
         return ratio, logic_map
@@ -258,10 +261,19 @@ class Model:
             # ratio metrics
             ratio_11, _ = self.angle_error_ratio(angle_degree, 11.25)
             ratio_22, _ = self.angle_error_ratio(angle_degree, 22.5)
-            ratio_30, _ = self.angle_error_ratio(angle_degree, 30)
-            ratio_45, _ = self.angle_error_ratio(angle_degree, 45)
+            ratio_30, _ = self.angle_error_ratio(angle_degree, 30.0)
+            ratio_45, _ = self.angle_error_ratio(angle_degree, 45.0)
+            # image-wise metrics
+            batch_size = self.head_pred['norm'].size(0)
+            # TODO double check if it's image-wise
+            batch_angles = angle_degree.view(batch_size, -1)
+            image_mean = torch.mean(batch_angles, dim=1)
+            image_score, _ = self.angle_error_ratio(batch_angles, 45.0)
 
-            return {'batch_size': self.head_pred['norm'].size(0),
+            return {'batch_size': batch_size,
+                    'pixel_error': angle_degree.cpu().detach().numpy(),
+                    'image_mean': image_mean.cpu().detach().numpy(),
+                    'image_score': image_score.cpu().detach().numpy(),
                     'ratio_11': ratio_11.cpu().detach().numpy(),
                     'ratio_22': ratio_22.cpu().detach().numpy(),
                     'ratio_30': ratio_30.cpu().detach().numpy(),

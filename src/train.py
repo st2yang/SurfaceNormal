@@ -6,6 +6,8 @@ import time
 from dataset import GameDataset
 from model import Model
 import numpy as np
+import os
+import matplotlib.pylab as plt
 
 start = time.time()
 
@@ -46,35 +48,39 @@ if __name__ == '__main__':
     ## Get model
     model = Model()
     model.initialize(cfg)
+    model.load_networks(339)
+    metrics_dir = os.path.join(model.save_dir, 'metrics')
+    if not os.path.isdir(metrics_dir):
+        os.makedirs(metrics_dir)
 
     ## Training
     for epoch in range(cfg['N_EPOCH']):
         # Get input data, doing this since they of diff. size
-        inputs = {}
-        while True:
-            try:
-                inputs['syn'] = next(dataiterator_syn)
-            except StopIteration:
-                dataiterator_syn = iter(dataloader_syn)
-                break
-            if cfg['USE_DA']:
-                try:
-                    inputs['real'] = next(dataiterator_real)
-                except StopIteration:
-                    dataiterator_real = iter(dataloader_real)
-                    inputs['real'] = next(dataiterator_real)
-
-            ## update
-            model.set_input(inputs)
-            model.optimize()
-
-            ## logging
-            model.print_n_log_losses(epoch)
-            model.visualize_pred(epoch)
+        # inputs = {}
+        # while True:
+        #     try:
+        #         inputs['syn'] = next(dataiterator_syn)
+        #     except StopIteration:
+        #         dataiterator_syn = iter(dataloader_syn)
+        #         break
+        #     if cfg['USE_DA']:
+        #         try:
+        #             inputs['real'] = next(dataiterator_real)
+        #         except StopIteration:
+        #             dataiterator_real = iter(dataloader_real)
+        #             inputs['real'] = next(dataiterator_real)
+        #
+        #     ## update
+        #     model.set_input(inputs)
+        #     model.optimize()
+        #
+        #     ## logging
+        #     model.print_n_log_losses(epoch)
+        #     model.visualize_pred(epoch)
 
         ## saving
         if (epoch+1) % cfg['SAVE_FREQ'] == 0:
-            model.save_networks(epoch)
+            # model.save_networks(epoch)
             # evaluate the model on the test data
             test_inputs = {}
             ratios_11 = []
@@ -82,6 +88,10 @@ if __name__ == '__main__':
             ratios_30 = []
             ratios_45 = []
             batch_sizes = []
+            image_scores = np.array([])
+            image_means = np.array([])
+            pixel_errors = np.array([])
+
             while True:
                 try:
                     test_inputs['syn'] = next(dataiterator_test)
@@ -97,13 +107,41 @@ if __name__ == '__main__':
                 ratios_22.append(test_results['ratio_22'])
                 ratios_30.append(test_results['ratio_30'])
                 ratios_45.append(test_results['ratio_45'])
+                pixel_errors = np.append(pixel_errors, test_results['pixel_error'])
+                image_means = np.append(image_means, test_results['image_mean'])
+                image_scores = np.append(image_scores, test_results['image_score'])
 
             metrics = {}
+            metrics['mean'] = np.mean(pixel_errors)
+            metrics['median'] = np.median(pixel_errors)
             metrics['11.25'] = np.average(np.array(ratios_11), weights=np.array(batch_sizes))
             metrics['22.5'] = np.average(np.array(ratios_22), weights=np.array(batch_sizes))
             metrics['30'] = np.average(np.array(ratios_30), weights=np.array(batch_sizes))
             metrics['45'] = np.average(np.array(ratios_45), weights=np.array(batch_sizes))
+            np.save(os.path.join(metrics_dir, 'results_ep{}'.format(epoch)), metrics)
             print(metrics)
+
+            # plots
+            fig = plt.figure()
+            plt.hist(pixel_errors, bins=1000, density=1)
+            plt.xlim(0, 60)
+            plt.ylabel('percentage of pixels')
+            plt.xlabel('angle errors')
+            fig.savefig(os.path.join(metrics_dir, 'histogram_ep{}.png'.format(epoch)))
+
+            fig = plt.figure()
+            plt.hist(image_means, bins=100, density=1, cumulative=True)
+            plt.xlim(0, 100)
+            plt.ylabel('percentage of images')
+            plt.xlabel('mean angle errors of image')
+            fig.savefig(os.path.join(metrics_dir, 'image_ep{}.png'.format(epoch)))
+
+            fig = plt.figure()
+            plt.hist(image_scores, bins=100, density=1, cumulative=-1)
+            plt.xlim(0.0, 1)
+            plt.ylabel('percentage of images')
+            plt.xlabel('quality of normal prediction (percents of pixels with error less than 45°)')
+            fig.savefig(os.path.join(metrics_dir, 'quality_ep{}.png'.format(epoch)))
 
     print('==> Finished Training')
     del dataiterator_syn
