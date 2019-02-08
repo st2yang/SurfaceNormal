@@ -11,6 +11,7 @@ import scipy.io as sio
 # Modify them to deal with several different modality pics together
 ##################################
 
+
 class Rescale(object):
     """ Rescale the image in a sample to a given size. """
     def __init__(self, output_size):
@@ -33,7 +34,7 @@ class Rescale(object):
         depth_im = transform.resize(depth_img, (new_h, new_w), preserve_range=True, mode='reflect',anti_aliasing=True)
         normal_im = transform.resize(normal_img, (new_h, new_w), preserve_range=True, mode='reflect', anti_aliasing=True)
         edge_im = transform.resize(edge_img, (new_h, new_w), preserve_range=True, mode='reflect', anti_aliasing=True,)
-        return {'color':color_im, 'depth':depth_im, 'edge':edge_im, 'edge_pix':sample['edge_pix'], 'normal':normal_im}
+        return {'color': color_im, 'depth': depth_im, 'edge': edge_im, 'edge_pix': sample['edge_pix'], 'normal': normal_im}
 
 
 class RandomCrop(object):
@@ -43,13 +44,16 @@ class RandomCrop(object):
         self.output_size = (output_size, output_size)
 
     def __call__(self, sample):
-        color_img, depth_img, edge_img, normal_img =  sample['color'], sample['depth'], sample['edge'], sample['normal']
+        color_img, depth_img, edge_img, normal_img = sample['color'], sample['depth'], sample['edge'], sample['normal']
 
         h, w = color_img.shape[:2]
         new_h, new_w = self.output_size
 
+        # TODO: should be different in train and eval
         top = np.random.randint(0, h - new_h)
         left = np.random.randint(0, w - new_w)
+        # top = np.int((h - new_h) / 2)
+        # left = np.int((w - new_w) / 2)
 
         color_im = color_img[top: top + new_h, left: left + new_w]
         depth_im = depth_img[top: top + new_h, left: left + new_w]
@@ -62,13 +66,13 @@ class RandomCrop(object):
 class ToTensor(object):
     """ Convert ndarrays in sample to Tensors. """
     def __call__(self, sample):
-        color_img, depth_img, edge_img, normal_img =  sample['color'], sample['depth'], sample['edge'], sample['normal']
+        color_img, depth_img, edge_img, normal_img = sample['color'], sample['depth'], sample['edge'], sample['normal']
 
         # swap color axis because
         # numpy image: H x W x C  --> torch image: C x H x W (C=1,3)
         color_img = color_img.transpose((2, 0, 1))
         normal_img = normal_img.transpose((2, 0, 1))
-        h,w = depth_img.shape
+        h, w = depth_img.shape
         depth_img = depth_img.reshape((1, h, w))
         edge_img = edge_img.reshape((1, h, w))
 
@@ -77,6 +81,7 @@ class ToTensor(object):
                 'edge': torch.from_numpy(edge_img.astype('float32')),
                 'normal': torch.from_numpy(normal_img.astype('float32')),
                 'edge_pix': sample['edge_pix']}
+
 
 #########################################
 # Dataset
@@ -119,10 +124,11 @@ class GameDataset(torch.utils.data.Dataset):
                 raise ValueError('wrong dataset!')
 
             # choose the pics with decent edge map
-            edge_img[edge_img>0.] = 1
+            edge_img[edge_img > 0.] = 1
             edge_c = np.count_nonzero(edge_img)
+            # TODO: should be different in train and eval (not choosing good edge)
             if edge_c < 350:
-                idx  = np.random.randint(len(self.indexlist))
+                idx = np.random.randint(len(self.indexlist))
             else:
                 break
 
@@ -130,7 +136,7 @@ class GameDataset(torch.utils.data.Dataset):
         depth_img[depth_img<0] = 0
         depth_img = np.log(depth_img / 1000. + 1e-8)
 
-        sample = {'color':color_img, 'depth':depth_img, 'edge':edge_img,'edge_pix': edge_c, 'normal':normal_img}
+        sample = {'color': color_img, 'depth': depth_img, 'edge': edge_img, 'edge_pix': edge_c, 'normal': normal_img}
 
         # image transformation
         ## TODO recover uncropping for test later
