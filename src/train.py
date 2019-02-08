@@ -5,8 +5,10 @@ import torchvision
 import time
 from dataset import GameDataset
 from model import Model
+import numpy as np
 
 start = time.time()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -53,13 +55,13 @@ if __name__ == '__main__':
             try:
                 inputs['syn'] = next(dataiterator_syn)
             except StopIteration:
-                dataiterator_syn=iter(dataloader_syn)
+                dataiterator_syn = iter(dataloader_syn)
                 break
             if cfg['USE_DA']:
                 try:
                     inputs['real'] = next(dataiterator_real)
                 except StopIteration:
-                    dataiterator_real= iter(dataloader_real)
+                    dataiterator_real = iter(dataloader_real)
                     inputs['real'] = next(dataiterator_real)
 
             ## update
@@ -75,6 +77,11 @@ if __name__ == '__main__':
             model.save_networks(epoch)
             # evaluate the model on the test data
             test_inputs = {}
+            ratios_11 = []
+            ratios_22 = []
+            ratios_30 = []
+            ratios_45 = []
+            batch_sizes = []
             while True:
                 try:
                     test_inputs['syn'] = next(dataiterator_test)
@@ -85,6 +92,18 @@ if __name__ == '__main__':
                 ## update
                 model.set_input(test_inputs)
                 test_results = model.test()
+                batch_sizes.append(test_results['batch_size'])
+                ratios_11.append(test_results['ratio_11'])
+                ratios_22.append(test_results['ratio_22'])
+                ratios_30.append(test_results['ratio_30'])
+                ratios_45.append(test_results['ratio_45'])
+
+            metrics = {}
+            metrics['11.25'] = np.average(np.array(ratios_11), weights=np.array(batch_sizes))
+            metrics['22.5'] = np.average(np.array(ratios_22), weights=np.array(batch_sizes))
+            metrics['30'] = np.average(np.array(ratios_30), weights=np.array(batch_sizes))
+            metrics['45'] = np.average(np.array(ratios_45), weights=np.array(batch_sizes))
+            print(metrics)
 
     print('==> Finished Training')
     del dataiterator_syn

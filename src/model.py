@@ -230,13 +230,8 @@ class Model:
                           dtype=torch.float64))
         return ratio, logic_map
 
-    def test(self):
-        self.eval_mode()
-        with torch.no_grad():
-            self.forward()
-
+    def normal_angle(self):
         # surface normal
-        batch_size = self.head_pred['norm'].size(0)
         ch = self.head_pred['norm'].size(1)
         _pred = self.head_pred['norm'].permute(0, 2, 3, 1).contiguous().view(-1, ch)
         _gt = self.input_syn_norm.permute(0, 2, 3, 1).contiguous().view(-1, ch)
@@ -252,10 +247,25 @@ class Model:
 
         angle_rad = torch.acos(cos_val)
         angle_degree = angle_rad / 3.14 * 180
-        # ratio metrics
-        ratio_11, _ = self.angle_error_ratio(angle_degree, 11.25)
+        return angle_degree
 
-        return {'batch_size': batch_size, 'ratio_11': ratio_11.cpu().detach().numpy()}
+    def test(self):
+        self.eval_mode()
+        with torch.no_grad():
+            self.forward()
+
+            angle_degree = self.normal_angle()
+            # ratio metrics
+            ratio_11, _ = self.angle_error_ratio(angle_degree, 11.25)
+            ratio_22, _ = self.angle_error_ratio(angle_degree, 22.5)
+            ratio_30, _ = self.angle_error_ratio(angle_degree, 30)
+            ratio_45, _ = self.angle_error_ratio(angle_degree, 45)
+
+            return {'batch_size': self.head_pred['norm'].size(0),
+                    'ratio_11': ratio_11.cpu().detach().numpy(),
+                    'ratio_22': ratio_22.cpu().detach().numpy(),
+                    'ratio_30': ratio_30.cpu().detach().numpy(),
+                    'ratio_45': ratio_45.cpu().detach().numpy()}
 
     # update learning rate (called once every epoch)
     def update_learning_rate(self):
