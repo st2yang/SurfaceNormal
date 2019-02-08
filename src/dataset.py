@@ -97,7 +97,7 @@ class GameDataset(torch.utils.data.Dataset):
         self.cfg = cfg
         self.norm = norm
         if 'NYUD' in self.cfg:
-            self.nyud = sio.loadmat(self.cfg['NYUD'] + 'nyu_dataset.mat')
+            self.nyud = sio.loadmat(os.path.join(self.cfg['NYUD'], 'nyu_dataset.mat'))
 
     def __len__(self):
         return len(self.indexlist)
@@ -116,8 +116,8 @@ class GameDataset(torch.utils.data.Dataset):
                 edge_img = io.imread(os.path.join(self.cfg['SCENENET_DIR'], info[1], 'edge', info[2]+'.png'))
                 normal_img = io.imread(os.path.join(self.cfg['SCENENET_DIR'], info[1], 'normal', info[2]+'.png'))
             elif info[0] == 'nyud':
-                color_img = self.nyud['images'][:, :, :, int(info[1]-1)]
-                depth_img = self.nyud['depths'][:, :, int(info[1]-1)]
+                color_img = self.nyud['images'][:, :, :, int(info[1])-1]
+                depth_img = self.nyud['depths'][:, :, int(info[1])-1]
                 edge_img = io.imread(os.path.join(self.cfg['NYUD'], 'edges', info[1] + '.png'))
                 normal_img = io.imread(os.path.join(self.cfg['NYUD'], 'normals', info[1] + '.png'))
             else:

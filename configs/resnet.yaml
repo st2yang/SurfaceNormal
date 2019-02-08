@@ -9,9 +9,10 @@ NUM_WORKER: 16
 GRAY: False
 CROP_SIZE: 224
 TRAIN_FILE: ../data/train_shuffle.txt
-TEST_FILE: ../data/test_shuffle.txt
+TEST_FILE: ../data/nyud_shuffle.txt
 SUNCG_DIR: /workspace/saturnv-game/SUNCG/suncg_image256
 SCENENET_DIR: /home/marsyang/Documents/Dataset/scenenet
+NYUD: /home/marsyang/Documents/Dataset/nyu_dataset
 
 RESUME: False
 TEST: False
