@@ -89,11 +89,14 @@ class ToTensor(object):
 
 class GameDataset(torch.utils.data.Dataset):
     """ Game dataset: SUNCG, SceneNet """
-    def __init__(self, cfg, norm=None, train=True):
+    def __init__(self, cfg, norm=None, train=True, real_data=False):
         if train:
             self.indexlist = [line.rstrip('\n') for line in open(cfg['TRAIN_FILE'], 'r')]
         else:
-            self.indexlist = [line.rstrip('\n') for line in open(cfg['TEST_FILE'], 'r')]
+            if real_data:
+                self.indexlist = [line.rstrip('\n') for line in open(cfg['REAL_DATA_FILE'], 'r')]
+            else:
+                self.indexlist = [line.rstrip('\n') for line in open(cfg['TEST_FILE'], 'r')]
         self.cfg = cfg
         self.norm = norm
         if 'NYUD' in self.cfg:

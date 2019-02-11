@@ -4,7 +4,7 @@ import random
 
 data_path = '/home/marsyang/Documents/Dataset/scenenet/train/'
 
-start_fld = 179
+start_fld = 401
 end_fld = 999
 file_names = []
 

@@ -28,11 +28,17 @@ if __name__ == '__main__':
     dataiterator_syn = iter(dataloader_syn)
     print('==> Number of synthetic training images: %d.' % len(data_syn))
 
-    data_test = GameDataset(cfg, normalize, train=False)
+    data_test = GameDataset(cfg, normalize, train=False, real_data=False)
     dataloader_test = torch.utils.data.DataLoader(data_test, num_workers=cfg['NUM_WORKER'],
                                                   batch_size=cfg['BATCH_SIZE'], shuffle=False)
     dataiterator_test = iter(dataloader_test)
     print('==> Number of synthetic test images: %d.' % len(data_test))
+
+    real_data_test = GameDataset(cfg, normalize, train=False, real_data=True)
+    realdataloader_test = torch.utils.data.DataLoader(real_data_test, num_workers=cfg['NUM_WORKER'],
+                                                  batch_size=1, shuffle=False)
+    realdataiterator_test = iter(realdataloader_test)
+    print('==> Number of nyud test images: %d.' % len(real_data_test))
 
     if cfg['USE_DA']:
         data_real = torchvision.datasets.ImageFolder(cfg['REAL_DIR'],
@@ -48,7 +54,6 @@ if __name__ == '__main__':
     ## Get model
     model = Model()
     model.initialize(cfg)
-    model.load_networks(339)
     metrics_dir = os.path.join(model.save_dir, 'metrics')
     if not os.path.isdir(metrics_dir):
         os.makedirs(metrics_dir)
@@ -56,32 +61,41 @@ if __name__ == '__main__':
     ## Training
     for epoch in range(cfg['N_EPOCH']):
         # Get input data, doing this since they of diff. size
-        # inputs = {}
-        # while True:
-        #     try:
-        #         inputs['syn'] = next(dataiterator_syn)
-        #     except StopIteration:
-        #         dataiterator_syn = iter(dataloader_syn)
-        #         break
-        #     if cfg['USE_DA']:
-        #         try:
-        #             inputs['real'] = next(dataiterator_real)
-        #         except StopIteration:
-        #             dataiterator_real = iter(dataloader_real)
-        #             inputs['real'] = next(dataiterator_real)
-        #
-        #     ## update
-        #     model.set_input(inputs)
-        #     model.optimize()
-        #
-        #     ## logging
-        #     model.print_n_log_losses(epoch)
-        #     model.visualize_pred(epoch)
+        inputs = {}
+        while True:
+            try:
+                inputs['syn'] = next(dataiterator_syn)
+            except StopIteration:
+                dataiterator_syn = iter(dataloader_syn)
+                break
+
+            ## update
+            model.set_input(inputs)
+            model.optimize()
+
+            ## logging
+            # model.print_n_log_losses(epoch)
+            # model.visualize_pred(epoch)
 
         ## saving
         if (epoch+1) % cfg['SAVE_FREQ'] == 0:
-            # model.save_networks(epoch)
+            model.save_networks(epoch)
             # evaluate the model on the test data
+            count = 0
+            realdata_inputs = {}
+
+            while True:
+                try:
+                    realdata_inputs['syn'] = next(realdataiterator_test)
+                except StopIteration:
+                    realdataiterator_test = iter(realdataloader_test)
+                    break
+
+                ## save to file
+                model.set_input(realdata_inputs)
+                model.out_logic_map(epoch_num=epoch, img_num=count)
+                count += 1
+
             test_inputs = {}
             ratios_11 = []
             ratios_22 = []
@@ -98,8 +112,6 @@ if __name__ == '__main__':
                 except StopIteration:
                     dataiterator_test = iter(dataloader_test)
                     break
-
-                ## update
                 model.set_input(test_inputs)
                 test_results = model.test()
                 batch_sizes.append(test_results['batch_size'])
@@ -142,6 +154,8 @@ if __name__ == '__main__':
             plt.ylabel('percentage of images')
             plt.xlabel('quality of normal prediction (percents of pixels with error less than 45°)')
             fig.savefig(os.path.join(metrics_dir, 'quality_ep{}.png'.format(epoch)))
+
+            # TODO: close all saved figures for memory efficiency
 
     print('==> Finished Training')
     del dataiterator_syn

@@ -279,6 +279,46 @@ class Model:
                     'ratio_30': ratio_30.cpu().detach().numpy(),
                     'ratio_45': ratio_45.cpu().detach().numpy()}
 
+    def out_logic_map(self, epoch_num, img_num):
+        self.eval_mode()
+        with torch.no_grad():
+            self.forward()
+
+        # surface normal
+        batch_size = self.head_pred['norm'].size(0)
+        ch = self.head_pred['norm'].size(1)
+        _pred = self.head_pred['norm'].permute(0, 2, 3, 1).contiguous().view(-1, ch)
+        _gt = self.input_syn_norm.permute(0, 2, 3, 1).contiguous().view(-1, ch)
+        _gt = (_gt / 127.5) - 1
+        _pred = torch.nn.functional.normalize(_pred, dim=1)
+        _gt = torch.nn.functional.normalize(_gt, dim=1)
+        cos_label = torch.ones(_gt.size(0)).to(self.device)
+        norm_diff = self.criterionNorm_eval(_pred, _gt, cos_label)
+
+        cos_val = 1 - norm_diff
+        cos_val = torch.max(cos_val, -torch.ones_like(cos_val, device=self.device))
+        cos_val = torch.min(cos_val, torch.ones_like(cos_val, device=self.device))
+
+        angle_rad = torch.acos(cos_val)
+        angle_degree = angle_rad / 3.14 * 180
+        # ratio metrics
+        ratio_11, c = self.angle_error_ratio(angle_degree, 11.25)
+
+        good_pixel_img = torch.cat((c.view(-1, 1), c.view(-1, 1), c.view(-1, 1)), 1).view(
+            self.head_pred['norm'].size(0), self.head_pred['norm'].size(2),
+            self.head_pred['norm'].size(3), 3).permute(0, 3, 1, 2)
+
+        self.head_pred['norm'] = _pred.view(self.head_pred['norm'].size(0), self.head_pred['norm'].size(2),
+                                            self.head_pred['norm'].size(3), 3).permute(0, 3, 1, 2)
+        self.head_pred['norm'] = (self.head_pred['norm'] + 1) * 127.5
+        vis_norm = torch.cat((self.input_syn_norm, self.head_pred['norm'], good_pixel_img.float() * 255), dim=0)
+        map_path = '%s/ep%d/%d_norm.jpg' % (self.cfg['VIS_PATH'], epoch_num, img_num)
+        if not os.path.isdir(map_path):
+            os.makedirs(map_path)
+        torchvision.utils.save_image(vis_norm.detach(),
+                                     map_path,
+                                     nrow=1, normalize=True)
+
     # update learning rate (called once every epoch)
     def update_learning_rate(self):
         for scheduler in self.schedulers:
