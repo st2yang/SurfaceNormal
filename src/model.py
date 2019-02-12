@@ -312,11 +312,11 @@ class Model:
                                             self.head_pred['norm'].size(3), 3).permute(0, 3, 1, 2)
         self.head_pred['norm'] = (self.head_pred['norm'] + 1) * 127.5
         vis_norm = torch.cat((self.input_syn_norm, self.head_pred['norm'], good_pixel_img.float() * 255), dim=0)
-        map_path = '%s/ep%d/%d_norm.jpg' % (self.cfg['VIS_PATH'], epoch_num, img_num)
+        map_path = '%s/ep%d' % (self.cfg['VIS_PATH'], epoch_num)
         if not os.path.isdir(map_path):
             os.makedirs(map_path)
         torchvision.utils.save_image(vis_norm.detach(),
-                                     map_path,
+                                     '%s/%d_norm.jpg' % (map_path, img_num),
                                      nrow=1, normalize=True)
 
     # update learning rate (called once every epoch)

@@ -54,12 +54,15 @@ if __name__ == '__main__':
     ## Get model
     model = Model()
     model.initialize(cfg)
+    model.load_networks(which_epoch=cfg['EPOCH_LOAD'])
     metrics_dir = os.path.join(model.save_dir, 'metrics')
     if not os.path.isdir(metrics_dir):
         os.makedirs(metrics_dir)
 
     ## Training
     for epoch in range(cfg['N_EPOCH']):
+        print('--------------')
+        print('training epoch', epoch)
         # Get input data, doing this since they of diff. size
         inputs = {}
         while True:
@@ -83,6 +86,12 @@ if __name__ == '__main__':
             # evaluate the model on the test data
             count = 0
             realdata_inputs = {}
+            ratios_11 = []
+            ratios_22 = []
+            ratios_30 = []
+            ratios_45 = []
+            batch_sizes = []
+            pixel_errors = np.array([])
 
             while True:
                 try:
@@ -93,8 +102,23 @@ if __name__ == '__main__':
 
                 ## save to file
                 model.set_input(realdata_inputs)
+                real_test_results = model.test()
+                ratios_11.append(real_test_results['ratio_11'])
+                ratios_22.append(real_test_results['ratio_22'])
+                ratios_30.append(real_test_results['ratio_30'])
+                ratios_45.append(real_test_results['ratio_45'])
+                pixel_errors = np.append(pixel_errors, real_test_results['pixel_error'])
                 model.out_logic_map(epoch_num=epoch, img_num=count)
                 count += 1
+            metrics = {}
+            metrics['mean'] = np.mean(pixel_errors)
+            metrics['median'] = np.median(pixel_errors)
+            metrics['11.25'] = np.average(np.array(ratios_11))
+            metrics['22.5'] = np.average(np.array(ratios_22))
+            metrics['30'] = np.average(np.array(ratios_30))
+            metrics['45'] = np.average(np.array(ratios_45))
+            np.save(os.path.join(metrics_dir, 'results_real_ep{}'.format(epoch)), metrics)
+            print('real data nyud metrics: ', metrics)
 
             test_inputs = {}
             ratios_11 = []
@@ -130,8 +154,8 @@ if __name__ == '__main__':
             metrics['22.5'] = np.average(np.array(ratios_22), weights=np.array(batch_sizes))
             metrics['30'] = np.average(np.array(ratios_30), weights=np.array(batch_sizes))
             metrics['45'] = np.average(np.array(ratios_45), weights=np.array(batch_sizes))
-            np.save(os.path.join(metrics_dir, 'results_ep{}'.format(epoch)), metrics)
-            print(metrics)
+            np.save(os.path.join(metrics_dir, 'results_synthetic_ep{}'.format(epoch)), metrics)
+            print('synthetic data metrics: ', metrics)
 
             # plots
             fig = plt.figure()
@@ -140,6 +164,7 @@ if __name__ == '__main__':
             plt.ylabel('percentage of pixels')
             plt.xlabel('angle errors')
             fig.savefig(os.path.join(metrics_dir, 'histogram_ep{}.png'.format(epoch)))
+            fig.clf()
 
             fig = plt.figure()
             plt.hist(image_means, bins=100, density=1, cumulative=True)
@@ -147,6 +172,7 @@ if __name__ == '__main__':
             plt.ylabel('percentage of images')
             plt.xlabel('mean angle errors of image')
             fig.savefig(os.path.join(metrics_dir, 'image_ep{}.png'.format(epoch)))
+            fig.clf()
 
             fig = plt.figure()
             plt.hist(image_scores, bins=100, density=1, cumulative=-1)
@@ -154,6 +180,7 @@ if __name__ == '__main__':
             plt.ylabel('percentage of images')
             plt.xlabel('quality of normal prediction (percents of pixels with error less than 45°)')
             fig.savefig(os.path.join(metrics_dir, 'quality_ep{}.png'.format(epoch)))
+            fig.clf()
 
             # TODO: close all saved figures for memory efficiency
 

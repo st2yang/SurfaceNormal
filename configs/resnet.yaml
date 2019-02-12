@@ -17,13 +17,13 @@ NYUD: /home/marsyang/Documents/Dataset/nyu_dataset
 
 RESUME: False
 TEST: False
-EPOCH_LOAD: 3
-CKPT_PATH: outputs/resnet/2019-02-08_14-17-19
-VIS_PATH: outputs/resnet/2019-02-10/vis
+EPOCH_LOAD: 30
+CKPT_PATH: outputs/resnet/2019-02-11_10-18-07
+VIS_PATH: outputs/resnet/2019-02-12/vis
 
 ## Train
 TRAIN: True
-LR: 0.001
+LR: 0.0003
 LR_POLICY: multi-step
 LR_DECAY_EP: [18, 27]
 N_EPOCH: 100
