@@ -386,7 +386,7 @@ class netB_resnet34(nn.Module):
 
     def forward(self, x):
         feat = self.resnet(x)
-        return {'out': feat}
+        return feat
 
 
 # class netB_resnet34(nn.Module):
@@ -412,12 +412,43 @@ class netB_resnet34(nn.Module):
 class netH_resnet34(nn.Module):
     def __init__(self):
         super(netH_resnet34, self).__init__()
-        self.normal = nn.Sequential(
-            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(256), nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(128), nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(64), nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(64), nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1))
+        # self.main = nn.Sequential(
+        #     nn.ConvTranspose2d(512, 512, kernel_size=4, stride=2, padding=1),
+        #     nn.BatchNorm2d(512), nn.ReLU(inplace=True))
+        # self.n_2 = nn.Sequential(
+        #     nn.ConvTranspose2d(1024, 256, kernel_size=4, stride=2, padding=1),
+        #     nn.BatchNorm2d(256), nn.ReLU(inplace=True))
+        # self.n_3 = nn.Sequential(
+        #     nn.ConvTranspose2d(512, 128, kernel_size=4, stride=2, padding=1),
+        #     nn.BatchNorm2d(128), nn.ReLU(inplace=True))
+        # self.n_4 = nn.Sequential(
+        #     nn.ConvTranspose2d(256, 64, kernel_size=4, stride=2, padding=1),
+        #     nn.BatchNorm2d(64), nn.ReLU(inplace=True),
+        #     nn.ConvTranspose2d(64, 3, kernel_size=3, stride=1, padding=1))
+
+        self.main = nn.Sequential(
+            nn.ConvTranspose2d(512, 512, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(512), nn.ReLU(inplace=True))
+        self.n_2 = nn.Sequential(
+            nn.ConvTranspose2d(768, 256, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(256), nn.ReLU(inplace=True))
+        self.n_3 = nn.Sequential(
+            nn.ConvTranspose2d(384, 128, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(128), nn.ReLU(inplace=True))
+        self.n_4 = nn.Sequential(
+            nn.ConvTranspose2d(192, 64, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(64), nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(64), nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(64, 3, kernel_size=3, stride=1, padding=1))
+
+        # NOTE: this is the previous code without concatenation
+        # self.normal = nn.Sequential(
+        #     nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(256), nn.ReLU(inplace=True),
+        #     nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(128), nn.ReLU(inplace=True),
+        #     nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(64), nn.ReLU(inplace=True),
+        #     nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(64), nn.ReLU(inplace=True),
+        #     nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1))
 
         self.depth = nn.Sequential(
             nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(256), nn.ReLU(inplace=True),
@@ -426,8 +457,13 @@ class netH_resnet34(nn.Module):
             nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(64), nn.ReLU(inplace=True),
             nn.ConvTranspose2d(64, 1, kernel_size=4, stride=2, padding=1))
 
-    def forward(self, x):
-        return {'depth': self.depth(x), 'norm': self.normal(x)}
+    def forward(self, l1, l2, l3, l4):
+        feat1 = self.main(l4)
+        n_feat2 = self.n_2(torch.cat((feat1, l3), dim=1))
+        n_feat3 = self.n_3(torch.cat((n_feat2, l2), dim=1))
+        n = self.n_4(torch.cat((n_feat3, l1), dim=1))
+        return {'depth': self.depth(l4), 'norm': n}
+        # return {'depth': self.depth(x), 'norm': self.normal(x)}
 
 
 # test resnet

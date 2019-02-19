@@ -60,7 +60,7 @@ if __name__ == '__main__':
         os.makedirs(metrics_dir)
 
     ## Training
-    for epoch in range(cfg['N_EPOCH']):
+    for epoch in range(cfg['EPOCH_LOAD'] + 1, cfg['N_EPOCH']):
         print('--------------')
         print('training epoch', epoch)
         # Get input data, doing this since they of diff. size

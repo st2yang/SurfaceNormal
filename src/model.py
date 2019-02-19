@@ -127,7 +127,11 @@ class Model:
 
     def forward(self):
         self.feat_syn = self.netB(self.input_syn_color)
-        self.head_pred = self.netH(self.feat_syn['out'])
+        # TODO: make it compatible with other networks in addition to ResNet
+        self.head_pred = self.netH(self.feat_syn['layer1'],
+                                   self.feat_syn['layer2'],
+                                   self.feat_syn['layer3'],
+                                   self.feat_syn['layer4'])
         if self.cfg['USE_DA'] and self.cfg['TRAIN']:
             self.feat_real = self.netB(self.input_real_color)
             self.pred_D_real = self.netD(self.feat_real[self.cfg['DA_LAYER']])
@@ -137,7 +141,10 @@ class Model:
     def backward_BH(self):
         ## forward to compute prediction
         # TODO: replace this with self.head_pred to avoid computation twice
-        self.task_pred = self.netH(self.feat_syn['out'])
+        self.task_pred = self.netH(self.feat_syn['layer1'],
+                                   self.feat_syn['layer2'],
+                                   self.feat_syn['layer3'],
+                                   self.feat_syn['layer4'])
 
         # depth
         depth_diff = self.task_pred['depth'] - self.input_syn_dep
@@ -394,6 +401,7 @@ class Model:
 
     # load models from the disk
     def load_networks(self, which_epoch):
+        self.save_dir = self.load_dir
         print('loading networks...')
         if which_epoch == 'None':
             print('epoch is None')

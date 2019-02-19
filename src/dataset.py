@@ -121,8 +121,8 @@ class GameDataset(torch.utils.data.Dataset):
             elif info[0] == 'nyud':
                 color_img = self.nyud['images'][:, :, :, int(info[1])-1]
                 depth_img = self.nyud['depths'][:, :, int(info[1])-1]
-                edge_img = io.imread(os.path.join(self.cfg['NYUD'], 'edges', info[1] + '.png'))
-                normal_img = io.imread(os.path.join(self.cfg['NYUD'], 'normals', info[1] + '.png'))
+                edge_img = io.imread(os.path.join(self.cfg['NYUD'], 'edge', info[1] + '.png'))
+                normal_img = io.imread(os.path.join(self.cfg['NYUD'], 'normal', info[1] + '.png'))
             else:
                 raise ValueError('wrong dataset!')
 
@@ -135,6 +135,8 @@ class GameDataset(torch.utils.data.Dataset):
             else:
                 break
 
+
+
         # TODO Jason: to fix
         depth_img[depth_img < 0] = 0
         depth_img = np.log(depth_img / 1000. + 1e-8)
@@ -143,9 +145,14 @@ class GameDataset(torch.utils.data.Dataset):
 
         # image transformation
         ## TODO recover uncropping for test later
-        _transforms = torchvision.transforms.Compose([Rescale((256,256)),
-                                                      RandomCrop(self.cfg['CROP_SIZE']),
-                                                      ToTensor()])
+        h, w = color_img.shape[:2]
+        if w == 640 and h == 480:
+            _transforms = torchvision.transforms.Compose([RandomCrop(self.cfg['CROP_SIZE']),
+                                                          ToTensor()])
+        else:
+            _transforms = torchvision.transforms.Compose([Rescale((256,256)),
+                                                         RandomCrop(self.cfg['CROP_SIZE']),
+                                                         ToTensor()])
 
         # if self.cfg['TRAIN']:
         #     _transforms = torchvision.transforms.Compose([
