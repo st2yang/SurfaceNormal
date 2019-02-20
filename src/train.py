@@ -12,6 +12,71 @@ import matplotlib.pylab as plt
 start = time.time()
 
 
+def evaluation_metrics(model, data_name, dataiterator_test, dataloader_test, metrics_dir, epoch):
+    inputs = {}
+    ratios_11 = []
+    ratios_22 = []
+    ratios_30 = []
+    ratios_45 = []
+    batch_sizes = []
+    image_scores = np.array([])
+    image_means = np.array([])
+    pixel_errors = np.array([])
+
+    while True:
+        try:
+            inputs['syn'] = next(dataiterator_test)
+        except StopIteration:
+            dataiterator_test = iter(dataloader_test)
+            break
+        model.set_input(inputs)
+        test_results = model.test()
+        batch_sizes.append(test_results['batch_size'])
+        ratios_11.append(test_results['ratio_11'])
+        ratios_22.append(test_results['ratio_22'])
+        ratios_30.append(test_results['ratio_30'])
+        ratios_45.append(test_results['ratio_45'])
+        pixel_errors = np.append(pixel_errors, test_results['pixel_error'])
+        image_means = np.append(image_means, test_results['image_mean'])
+        image_scores = np.append(image_scores, test_results['image_score'])
+
+    metrics = {}
+    metrics['mean'] = np.mean(pixel_errors)
+    metrics['median'] = np.median(pixel_errors)
+    metrics['11.25'] = np.average(np.array(ratios_11), weights=np.array(batch_sizes))
+    metrics['22.5'] = np.average(np.array(ratios_22), weights=np.array(batch_sizes))
+    metrics['30'] = np.average(np.array(ratios_30), weights=np.array(batch_sizes))
+    metrics['45'] = np.average(np.array(ratios_45), weights=np.array(batch_sizes))
+    np.save(os.path.join(metrics_dir, 'results_{}_ep{}'.format(data_name, epoch)), metrics)
+    print(data_name, ' test metrics: ', metrics)
+
+    # plots
+    fig = plt.figure()
+    plt.hist(pixel_errors, bins=1000, density=1)
+    plt.xlim(0, 60)
+    plt.ylabel('percentage of pixels')
+    plt.xlabel('angle errors')
+    fig.savefig(os.path.join(metrics_dir, 'histogram_{}_ep{}.png'.format(data_name, epoch)))
+    fig.clf()
+
+    fig = plt.figure()
+    plt.hist(image_means, bins=100, density=1, cumulative=True)
+    plt.xlim(0, 100)
+    plt.ylabel('percentage of images')
+    plt.xlabel('mean angle errors of image')
+    fig.savefig(os.path.join(metrics_dir, 'image_{}_ep{}.png'.format(data_name, epoch)))
+    fig.clf()
+
+    # TODO: to check this metric
+    fig = plt.figure()
+    plt.hist(image_scores, bins=100, density=1, cumulative=-1)
+    plt.xlim(0.0, 1)
+    plt.ylabel('percentage of images')
+    plt.xlabel('quality of normal prediction (percents of pixels with error less than 45°)')
+    fig.savefig(os.path.join(metrics_dir, 'quality_{}_ep{}.png'.format(data_name, epoch)))
+    fig.clf()
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='../configs/resnet.yaml', help='Path to the config file.')
@@ -22,23 +87,29 @@ if __name__ == '__main__':
 
     ## Get dataset
     normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[1, 1, 1])
-    data_syn = GameDataset(cfg, normalize)
-    dataloader_syn = torch.utils.data.DataLoader(data_syn, num_workers=cfg['NUM_WORKER'],
-                                                 batch_size=cfg['BATCH_SIZE'], shuffle=True)
-    dataiterator_syn = iter(dataloader_syn)
-    print('==> Number of synthetic training images: %d.' % len(data_syn))
+    data_train = GameDataset(cfg, normalize)
+    dataloader_train = torch.utils.data.DataLoader(data_train, num_workers=cfg['NUM_WORKER'],
+                                                   batch_size=cfg['BATCH_SIZE'], shuffle=True)
+    dataiterator_train = iter(dataloader_train)
+    print('==> Number of training images: %d.' % len(data_train))
 
-    data_test = GameDataset(cfg, normalize, train=False, real_data=False)
-    dataloader_test = torch.utils.data.DataLoader(data_test, num_workers=cfg['NUM_WORKER'],
-                                                  batch_size=cfg['BATCH_SIZE'], shuffle=False)
-    dataiterator_test = iter(dataloader_test)
-    print('==> Number of synthetic test images: %d.' % len(data_test))
+    scenenet_test = GameDataset(cfg, normalize, train=False, test_data='scenenet')
+    dataloader_scenenet_test = torch.utils.data.DataLoader(scenenet_test, num_workers=cfg['NUM_WORKER'],
+                                                           batch_size=cfg['BATCH_SIZE'], shuffle=False)
+    dataiterator_scenenet_test = iter(dataloader_scenenet_test)
+    print('==> Number of scenenet test images: %d.' % len(scenenet_test))
 
-    real_data_test = GameDataset(cfg, normalize, train=False, real_data=True)
-    realdataloader_test = torch.utils.data.DataLoader(real_data_test, num_workers=cfg['NUM_WORKER'],
-                                                  batch_size=1, shuffle=False)
-    realdataiterator_test = iter(realdataloader_test)
-    print('==> Number of nyud test images: %d.' % len(real_data_test))
+    nyud_test = GameDataset(cfg, normalize, train=False, test_data='nyud')
+    dataloader_nyud_test = torch.utils.data.DataLoader(nyud_test, num_workers=cfg['NUM_WORKER'],
+                                                       batch_size=1, shuffle=False)
+    dataiterator_nyud_test = iter(dataloader_nyud_test)
+    print('==> Number of nyud test images: %d.' % len(nyud_test))
+
+    scannet_test = GameDataset(cfg, normalize, train=False, test_data='scannet')
+    dataloader_scannet_test = torch.utils.data.DataLoader(scannet_test, num_workers=cfg['NUM_WORKER'],
+                                                          batch_size=cfg['BATCH_SIZE'], shuffle=False)
+    dataiterator_scannet_test = iter(dataloader_scannet_test)
+    print('==> Number of scannet test images: %d.' % len(scannet_test))
 
     if cfg['USE_DA']:
         data_real = torchvision.datasets.ImageFolder(cfg['REAL_DIR'],
@@ -64,16 +135,16 @@ if __name__ == '__main__':
         print('--------------')
         print('training epoch', epoch)
         # Get input data, doing this since they of diff. size
-        inputs = {}
+        train_inputs = {}
         while True:
             try:
-                inputs['syn'] = next(dataiterator_syn)
+                train_inputs['syn'] = next(dataiterator_train)
             except StopIteration:
-                dataiterator_syn = iter(dataloader_syn)
+                dataiterator_train = iter(dataloader_train)
                 break
 
             ## update
-            model.set_input(inputs)
+            model.set_input(train_inputs)
             model.optimize()
 
             ## logging
@@ -83,109 +154,48 @@ if __name__ == '__main__':
         ## saving
         if (epoch+1) % cfg['SAVE_FREQ'] == 0:
             model.save_networks(epoch)
-            # evaluate the model on the test data
-            count = 0
-            realdata_inputs = {}
-            ratios_11 = []
-            ratios_22 = []
-            ratios_30 = []
-            ratios_45 = []
-            batch_sizes = []
-            pixel_errors = np.array([])
+            # evaluate the model on the nyud test data
+            nyud_count = 0
+            nyud_inputs = {}
+            nyud_ratios_11 = []
+            nyud_ratios_22 = []
+            nyud_ratios_30 = []
+            nyud_ratios_45 = []
+            nyud_batch_sizes = []
+            nyud_pixel_errors = np.array([])
 
             while True:
                 try:
-                    realdata_inputs['syn'] = next(realdataiterator_test)
+                    nyud_inputs['syn'] = next(dataiterator_nyud_test)
                 except StopIteration:
-                    realdataiterator_test = iter(realdataloader_test)
+                    dataiterator_nyud_test = iter(dataloader_nyud_test)
                     break
 
                 ## save to file
-                model.set_input(realdata_inputs)
-                real_test_results = model.test()
-                ratios_11.append(real_test_results['ratio_11'])
-                ratios_22.append(real_test_results['ratio_22'])
-                ratios_30.append(real_test_results['ratio_30'])
-                ratios_45.append(real_test_results['ratio_45'])
-                pixel_errors = np.append(pixel_errors, real_test_results['pixel_error'])
-                model.out_logic_map(epoch_num=epoch, img_num=count)
-                count += 1
-            metrics = {}
-            metrics['mean'] = np.mean(pixel_errors)
-            metrics['median'] = np.median(pixel_errors)
-            metrics['11.25'] = np.average(np.array(ratios_11))
-            metrics['22.5'] = np.average(np.array(ratios_22))
-            metrics['30'] = np.average(np.array(ratios_30))
-            metrics['45'] = np.average(np.array(ratios_45))
-            np.save(os.path.join(metrics_dir, 'results_real_ep{}'.format(epoch)), metrics)
-            print('real data nyud metrics: ', metrics)
+                model.set_input(nyud_inputs)
+                nyud_test_results = model.test()
+                nyud_ratios_11.append(nyud_test_results['ratio_11'])
+                nyud_ratios_22.append(nyud_test_results['ratio_22'])
+                nyud_ratios_30.append(nyud_test_results['ratio_30'])
+                nyud_ratios_45.append(nyud_test_results['ratio_45'])
+                nyud_pixel_errors = np.append(nyud_pixel_errors, nyud_test_results['pixel_error'])
+                model.out_logic_map(epoch_num=epoch, img_num=nyud_count)
+                nyud_count += 1
+            nyud_metrics = {}
+            nyud_metrics['mean'] = np.mean(nyud_pixel_errors)
+            nyud_metrics['median'] = np.median(nyud_pixel_errors)
+            nyud_metrics['11.25'] = np.average(np.array(nyud_ratios_11))
+            nyud_metrics['22.5'] = np.average(np.array(nyud_ratios_22))
+            nyud_metrics['30'] = np.average(np.array(nyud_ratios_30))
+            nyud_metrics['45'] = np.average(np.array(nyud_ratios_45))
+            np.save(os.path.join(metrics_dir, 'results_nyud_ep{}'.format(epoch)), nyud_metrics)
+            print('nyud test metrics: ', nyud_metrics)
 
-            test_inputs = {}
-            ratios_11 = []
-            ratios_22 = []
-            ratios_30 = []
-            ratios_45 = []
-            batch_sizes = []
-            image_scores = np.array([])
-            image_means = np.array([])
-            pixel_errors = np.array([])
-
-            while True:
-                try:
-                    test_inputs['syn'] = next(dataiterator_test)
-                except StopIteration:
-                    dataiterator_test = iter(dataloader_test)
-                    break
-                model.set_input(test_inputs)
-                test_results = model.test()
-                batch_sizes.append(test_results['batch_size'])
-                ratios_11.append(test_results['ratio_11'])
-                ratios_22.append(test_results['ratio_22'])
-                ratios_30.append(test_results['ratio_30'])
-                ratios_45.append(test_results['ratio_45'])
-                pixel_errors = np.append(pixel_errors, test_results['pixel_error'])
-                image_means = np.append(image_means, test_results['image_mean'])
-                image_scores = np.append(image_scores, test_results['image_score'])
-
-            metrics = {}
-            metrics['mean'] = np.mean(pixel_errors)
-            metrics['median'] = np.median(pixel_errors)
-            metrics['11.25'] = np.average(np.array(ratios_11), weights=np.array(batch_sizes))
-            metrics['22.5'] = np.average(np.array(ratios_22), weights=np.array(batch_sizes))
-            metrics['30'] = np.average(np.array(ratios_30), weights=np.array(batch_sizes))
-            metrics['45'] = np.average(np.array(ratios_45), weights=np.array(batch_sizes))
-            np.save(os.path.join(metrics_dir, 'results_synthetic_ep{}'.format(epoch)), metrics)
-            print('synthetic data metrics: ', metrics)
-
-            # plots
-            fig = plt.figure()
-            plt.hist(pixel_errors, bins=1000, density=1)
-            plt.xlim(0, 60)
-            plt.ylabel('percentage of pixels')
-            plt.xlabel('angle errors')
-            fig.savefig(os.path.join(metrics_dir, 'histogram_ep{}.png'.format(epoch)))
-            fig.clf()
-
-            fig = plt.figure()
-            plt.hist(image_means, bins=100, density=1, cumulative=True)
-            plt.xlim(0, 100)
-            plt.ylabel('percentage of images')
-            plt.xlabel('mean angle errors of image')
-            fig.savefig(os.path.join(metrics_dir, 'image_ep{}.png'.format(epoch)))
-            fig.clf()
-
-            fig = plt.figure()
-            plt.hist(image_scores, bins=100, density=1, cumulative=-1)
-            plt.xlim(0.0, 1)
-            plt.ylabel('percentage of images')
-            plt.xlabel('quality of normal prediction (percents of pixels with error less than 45°)')
-            fig.savefig(os.path.join(metrics_dir, 'quality_ep{}.png'.format(epoch)))
-            fig.clf()
-
-            # TODO: close all saved figures for memory efficiency
+            evaluation_metrics(model, 'scenenet', dataiterator_scenenet_test, dataloader_scenenet_test, metrics_dir, epoch)
+            evaluation_metrics(model, 'scannet', dataiterator_scannet_test, dataloader_scannet_test, metrics_dir, epoch)
 
     print('==> Finished Training')
-    del dataiterator_syn
+    del dataiterator_train
     if cfg['USE_DA']:
         del dataiterator_real
 end = time.time()

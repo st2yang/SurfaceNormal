@@ -89,14 +89,18 @@ class ToTensor(object):
 
 class GameDataset(torch.utils.data.Dataset):
     """ Game dataset: SUNCG, SceneNet """
-    def __init__(self, cfg, norm=None, train=True, real_data=False):
+    def __init__(self, cfg, norm=None, train=True, test_data=None):
         if train:
             self.indexlist = [line.rstrip('\n') for line in open(cfg['TRAIN_FILE'], 'r')]
         else:
-            if real_data:
-                self.indexlist = [line.rstrip('\n') for line in open(cfg['REAL_DATA_FILE'], 'r')]
+            if test_data == 'scenenet':
+                self.indexlist = [line.rstrip('\n') for line in open(cfg['SCENET_TEST'], 'r')]
+            elif test_data == 'nyud':
+                self.indexlist = [line.rstrip('\n') for line in open(cfg['NYUD_TEST'], 'r')]
+            elif test_data == 'scannet':
+                self.indexlist = [line.rstrip('\n') for line in open(cfg['SCANNET_TEST'], 'r')]
             else:
-                self.indexlist = [line.rstrip('\n') for line in open(cfg['TEST_FILE'], 'r')]
+                raise ValueError('wrong dataset!')
         self.cfg = cfg
         self.norm = norm
         if 'NYUD' in self.cfg:
@@ -126,7 +130,7 @@ class GameDataset(torch.utils.data.Dataset):
             elif info[0] == 'scannet':
                 color_img = io.imread(os.path.join(self.cfg['SCANNET_DIR'], info[1], 'color', 'frame-'+info[2]+'.color.jpg'))
                 depth_img = io.imread(os.path.join(self.cfg['SCANNET_DIR'], info[1], 'depth', 'frame-'+info[2]+'.depth.pgm'))
-                edge_img = io.imread(os.path.join(self.cfg['SCANNET_DIR'], info[1], 'edge', 'frame-'+info[2]+'.png'))
+                edge_img = io.imread(os.path.join(self.cfg['SCANNET_DIR'], info[1], 'edge', 'frame-'+info[2]+'.edge.png'))
                 normal_img = io.imread(os.path.join(self.cfg['SCANNET_DIR'], info[1], 'normal', 'frame-'+info[2]+'.normal.png'))
             else:
                 raise ValueError('wrong dataset!')

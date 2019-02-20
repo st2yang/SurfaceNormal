@@ -3,31 +3,33 @@ import os
 import random
 
 #################################
-# nyud
-data_path = '/home/marsyang/Documents/Dataset/scannet/scene0000_00/'
+# scannet
+data_path = '/home/marsyang/Documents/Dataset/scannet/'
 
 # repeate 3 times
 start_fld = 1
 end_fld = 4
 file_names = []
 
-for fld in range(start_fld, end_fld):
-    ## nyud
-    first_fld = fld
-    normal_dir = os.path.join(data_path, 'normal')
-    if os.path.isdir(normal_dir):
-        for filepath in os.listdir(normal_dir):
-            if filepath.endswith(".png"):
-                img_names = filepath.split('/')[-1]
-                img_number = img_names.partition('.')[0].partition('-')[-1]
-                if int(img_number) > 5000:
-                    continue
-                file_name = 'scannet ' + 'scene0000_00 ' + str(img_number)
-                file_names.append(file_name)
+for o in os.listdir(data_path):
+    sub_dir = os.path.join(data_path, o)
+    if os.path.isdir(os.path.join(data_path, sub_dir)):
+        for fld in range(start_fld, end_fld):
+            first_fld = fld
+            normal_dir = os.path.join(sub_dir, 'normal')
+            if os.path.isdir(normal_dir):
+                for filepath in os.listdir(normal_dir):
+                    if filepath.endswith(".png"):
+                        img_names = filepath.split('/')[-1]
+                        img_number = img_names.partition('.')[0].partition('-')[-1]
+                        if int(img_number) > 5000:
+                            continue
+                        file_name = 'scannet ' + o + ' ' + str(img_number)
+                        file_names.append(file_name)
 
 random.shuffle(file_names)
 
-with open('scannet.txt', 'w') as f:
+with open('scannet_train.txt', 'w') as f:
     f.writelines("%s\n" % place for place in file_names)
 
 #################################
@@ -55,7 +57,7 @@ with open('scannet.txt', 'w') as f:
 #
 # random.shuffle(file_names)
 #
-# with open('shuffle_debug.txt', 'w') as f:
+# with open('nyud_train.txt', 'w') as f:
 #     f.writelines("%s\n" % place for place in file_names)
 
 #################################
@@ -82,7 +84,7 @@ with open('scannet.txt', 'w') as f:
 #
 # # random.shuffle(file_names)
 #
-# with open('test_shuffle.txt', 'w') as f:
+# with open('scenet_train.txt', 'w') as f:
 #     f.writelines("%s\n" % place for place in file_names)
 
 
