@@ -9,24 +9,25 @@ NUM_WORKER: 16
 GRAY: False
 CROP_SIZE: 224
 TRAIN_FILE: ../data/shuffle_debug.txt
-TEST_FILE: ../data/shuffle_debug.txt
+TEST_FILE: ../data/test_shuffle.txt
 REAL_DATA_FILE: ../data/nyud_shuffle.txt
 SUNCG_DIR: /workspace/saturnv-game/SUNCG/suncg_image256
 SCENENET_DIR: /home/marsyang/Documents/Dataset/scenenet
 NYUD: /home/marsyang/Documents/Dataset/nyu_dataset
+SCANNET_DIR: /home/marsyang/Documents/Dataset/scannet
 
 RESUME: False
 TEST: False
-EPOCH_LOAD: 44
-CKPT_PATH: outputs/resnet/2019-02-12_22-30-12
-VIS_PATH: outputs/resnet/2019-02-12/vis
+EPOCH_LOAD: 99
+CKPT_PATH: outputs/resnet/2019-02-19_12-25-12
+VIS_PATH: outputs/resnet/2019-02-19/vis
 
 ## Train
 TRAIN: True
-LR: 0.0003
+LR: 0.0001
 LR_POLICY: multi-step
 LR_DECAY_EP: [18, 27]
-N_EPOCH: 100
+N_EPOCH: 300
 BATCH_SIZE: 48
 
 ## Optimizers

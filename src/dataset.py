@@ -123,6 +123,11 @@ class GameDataset(torch.utils.data.Dataset):
                 depth_img = self.nyud['depths'][:, :, int(info[1])-1]
                 edge_img = io.imread(os.path.join(self.cfg['NYUD'], 'edge', info[1] + '.png'))
                 normal_img = io.imread(os.path.join(self.cfg['NYUD'], 'normal', info[1] + '.png'))
+            elif info[0] == 'scannet':
+                color_img = io.imread(os.path.join(self.cfg['SCANNET_DIR'], info[1], 'color', 'frame-'+info[2]+'.color.jpg'))
+                depth_img = io.imread(os.path.join(self.cfg['SCANNET_DIR'], info[1], 'depth', 'frame-'+info[2]+'.depth.pgm'))
+                edge_img = io.imread(os.path.join(self.cfg['SCANNET_DIR'], info[1], 'edge', 'frame-'+info[2]+'.png'))
+                normal_img = io.imread(os.path.join(self.cfg['SCANNET_DIR'], info[1], 'normal', 'frame-'+info[2]+'.normal.png'))
             else:
                 raise ValueError('wrong dataset!')
 
@@ -149,8 +154,13 @@ class GameDataset(torch.utils.data.Dataset):
         if w == 640 and h == 480:
             _transforms = torchvision.transforms.Compose([RandomCrop(self.cfg['CROP_SIZE']),
                                                           ToTensor()])
+        elif w == 1296 and h == 968:
+            # for scannet
+            _transforms = torchvision.transforms.Compose([Rescale((640, 480)),
+                                                          RandomCrop(self.cfg['CROP_SIZE']),
+                                                          ToTensor()])
         else:
-            _transforms = torchvision.transforms.Compose([Rescale((256,256)),
+            _transforms = torchvision.transforms.Compose([Rescale((256, 256)),
                                                          RandomCrop(self.cfg['CROP_SIZE']),
                                                          ToTensor()])
 
