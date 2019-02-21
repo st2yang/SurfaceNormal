@@ -10,6 +10,7 @@ import os
 import matplotlib.pylab as plt
 
 start = time.time()
+fig = plt.figure()
 
 
 def evaluation_metrics(model, data_name, dataloader_test, metrics_dir, epoch):
@@ -52,7 +53,6 @@ def evaluation_metrics(model, data_name, dataloader_test, metrics_dir, epoch):
     print(data_name, ' test metrics: ', metrics)
 
     # plots
-    fig = plt.figure()
     plt.hist(pixel_errors, bins=1000, density=1)
     plt.xlim(0, 60)
     plt.ylabel('percentage of pixels')
@@ -60,7 +60,6 @@ def evaluation_metrics(model, data_name, dataloader_test, metrics_dir, epoch):
     fig.savefig(os.path.join(metrics_dir, 'histogram_{}_ep{}.png'.format(data_name, epoch)))
     fig.clf()
 
-    fig = plt.figure()
     plt.hist(image_means, bins=100, density=1, cumulative=True)
     plt.xlim(0, 100)
     plt.ylabel('percentage of images')
@@ -69,7 +68,6 @@ def evaluation_metrics(model, data_name, dataloader_test, metrics_dir, epoch):
     fig.clf()
 
     # TODO: to check this metric
-    fig = plt.figure()
     plt.hist(image_scores, bins=100, density=1, cumulative=-1)
     plt.xlim(0.0, 1)
     plt.ylabel('percentage of images')
