@@ -26,7 +26,7 @@ VIS_PATH: outputs/resnet/2019-02-20/vis
 
 ## Train
 TRAIN: True
-LR: 0.0001
+LR: 0.0003
 LR_POLICY: multi-step
 LR_DECAY_EP: [18, 27]
 N_EPOCH: 300

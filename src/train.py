@@ -12,7 +12,7 @@ import matplotlib.pylab as plt
 start = time.time()
 
 
-def evaluation_metrics(model, data_name, dataiterator_test, dataloader_test, metrics_dir, epoch):
+def evaluation_metrics(model, data_name, dataloader_test, metrics_dir, epoch):
     inputs = {}
     ratios_11 = []
     ratios_22 = []
@@ -23,11 +23,12 @@ def evaluation_metrics(model, data_name, dataiterator_test, dataloader_test, met
     image_means = np.array([])
     pixel_errors = np.array([])
 
+    dataiterator_test = iter(dataloader_test)
+
     while True:
         try:
             inputs['syn'] = next(dataiterator_test)
         except StopIteration:
-            dataiterator_test = iter(dataloader_test)
             break
         model.set_input(inputs)
         test_results = model.test()
@@ -93,22 +94,20 @@ if __name__ == '__main__':
     dataiterator_train = iter(dataloader_train)
     print('==> Number of training images: %d.' % len(data_train))
 
-    scenenet_test = GameDataset(cfg, normalize, train=False, test_data='scenenet')
-    dataloader_scenenet_test = torch.utils.data.DataLoader(scenenet_test, num_workers=cfg['NUM_WORKER'],
-                                                           batch_size=cfg['BATCH_SIZE'], shuffle=False)
-    dataiterator_scenenet_test = iter(dataloader_scenenet_test)
-    print('==> Number of scenenet test images: %d.' % len(scenenet_test))
-
     nyud_test = GameDataset(cfg, normalize, train=False, test_data='nyud')
     dataloader_nyud_test = torch.utils.data.DataLoader(nyud_test, num_workers=cfg['NUM_WORKER'],
                                                        batch_size=1, shuffle=False)
     dataiterator_nyud_test = iter(dataloader_nyud_test)
     print('==> Number of nyud test images: %d.' % len(nyud_test))
 
+    scenenet_test = GameDataset(cfg, normalize, train=False, test_data='scenenet')
+    dataloader_scenenet_test = torch.utils.data.DataLoader(scenenet_test, num_workers=cfg['NUM_WORKER'],
+                                                           batch_size=cfg['BATCH_SIZE'], shuffle=False)
+    print('==> Number of scenenet test images: %d.' % len(scenenet_test))
+
     scannet_test = GameDataset(cfg, normalize, train=False, test_data='scannet')
     dataloader_scannet_test = torch.utils.data.DataLoader(scannet_test, num_workers=cfg['NUM_WORKER'],
                                                           batch_size=cfg['BATCH_SIZE'], shuffle=False)
-    dataiterator_scannet_test = iter(dataloader_scannet_test)
     print('==> Number of scannet test images: %d.' % len(scannet_test))
 
     if cfg['USE_DA']:
@@ -191,8 +190,8 @@ if __name__ == '__main__':
             np.save(os.path.join(metrics_dir, 'results_nyud_ep{}'.format(epoch)), nyud_metrics)
             print('nyud test metrics: ', nyud_metrics)
 
-            evaluation_metrics(model, 'scenenet', dataiterator_scenenet_test, dataloader_scenenet_test, metrics_dir, epoch)
-            evaluation_metrics(model, 'scannet', dataiterator_scannet_test, dataloader_scannet_test, metrics_dir, epoch)
+            evaluation_metrics(model, 'scenenet', dataloader_scenenet_test, metrics_dir, epoch)
+            evaluation_metrics(model, 'scannet', dataloader_scannet_test, metrics_dir, epoch)
 
     print('==> Finished Training')
     del dataiterator_train
