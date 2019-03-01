@@ -90,7 +90,8 @@ class ToTensor(object):
 class GameDataset(torch.utils.data.Dataset):
     """ Game dataset: SUNCG, SceneNet """
     def __init__(self, cfg, norm=None, train=True, test_data=None):
-        if train:
+        self.train = train
+        if self.train:
             self.indexlist = [line.rstrip('\n') for line in open(cfg['TRAIN_FILE'], 'r')]
         else:
             if test_data == 'scenenet':
@@ -139,7 +140,7 @@ class GameDataset(torch.utils.data.Dataset):
             edge_img[edge_img > 0.] = 1
             edge_c = np.count_nonzero(edge_img)
             # TODO: should be different in train and eval (not choosing good edge)
-            if edge_c < 350:
+            if self.train and edge_c < 350:
                 idx = np.random.randint(len(self.indexlist))
             else:
                 break
