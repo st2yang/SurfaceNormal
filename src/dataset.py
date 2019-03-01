@@ -119,9 +119,9 @@ class GameDataset(torch.utils.data.Dataset):
                 edge_img = io.imread(os.path.join(self.cfg['SUNCG_DIR'], 'edge', info[1]+'_256.png'))
                 normal_img = io.imread(os.path.join(self.cfg['SUNCG_DIR'], 'normal', info[1]+'_256.png'))
             elif info[0] == 'scenenet':
-                color_img = io.imread(os.path.join(self.cfg['SCENENET_DIR'], info[1], 'photo', info[2]+'.jpg'))
+                color_img = io.imread(os.path.join(self.cfg['SCENENET_DIR'], info[1], 'small_photo', info[2]+'.jpg'))
                 depth_img = io.imread(os.path.join(self.cfg['SCENENET_DIR'], info[1], 'depth', info[2]+'.png'))
-                edge_img = io.imread(os.path.join(self.cfg['SCENENET_DIR'], info[1], 'edge', info[2]+'.png'))
+                edge_img = io.imread(os.path.join(self.cfg['SCENENET_DIR'], info[1], 'small_edge', info[2]+'.png'))
                 normal_img = io.imread(os.path.join(self.cfg['SCENENET_DIR'], info[1], 'normal', info[2]+'.png'))
             elif info[0] == 'nyud':
                 color_img = self.nyud['images'][:, :, :, int(info[1])-1]
@@ -184,6 +184,7 @@ class GameDataset(torch.utils.data.Dataset):
         if self.norm:
             sample['color'] = sample['color'].float().div(255)
             sample['color'] = self.norm(sample['color'])
+        sample['color'] = torch.cat((sample['color'], sample['edge']), dim=0)
         return sample
 
 

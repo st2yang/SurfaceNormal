@@ -8,19 +8,19 @@ NUM_WORKER: 16
 ## Input
 GRAY: False
 CROP_SIZE: 224
-TRAIN_FILE: ../data/mixture_train.txt
-SCENET_TEST: ../data/scenenet_test.txt
+TRAIN_FILE: ../data/temp_train.txt
+SCENET_TEST: ../data/temp_test.txt
 NYUD_TEST: ../data/nyud_test.txt
 SCANNET_TEST: ../data/scannet_test.txt
 
 SUNCG_DIR: /workspace/saturnv-game/SUNCG/suncg_image256
-SCENENET_DIR: /home/marsyang/Documents/Dataset/scenenet
+SCENENET_DIR: /home/marsyang/Documents/Dataset/scenenet_test
 NYUD: /home/marsyang/Documents/Dataset/nyu_dataset
 SCANNET_DIR: /home/marsyang/Documents/Dataset/scannet
 
 RESUME: False
 TEST: False
-EPOCH_LOAD: 99
+EPOCH_LOAD: 0
 CKPT_PATH: outputs/resnet/2019-02-20_09_31_10
 VIS_PATH: outputs/resnet/2019-02-20/vis
 

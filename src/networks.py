@@ -457,12 +457,22 @@ class netH_resnet34(nn.Module):
             nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(64), nn.ReLU(inplace=True),
             nn.ConvTranspose2d(64, 1, kernel_size=4, stride=2, padding=1))
 
+        self.edge = nn.Sequential(
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(64), nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(64), nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(64, 1, kernel_size=4, stride=2, padding=1),
+            nn.Softmax(dim=1))
+
     def forward(self, l1, l2, l3, l4):
         feat1 = self.main(l4)
         n_feat2 = self.n_2(torch.cat((feat1, l3), dim=1))
         n_feat3 = self.n_3(torch.cat((n_feat2, l2), dim=1))
         n = self.n_4(torch.cat((n_feat3, l1), dim=1))
-        return {'depth': self.depth(l4), 'norm': n}
+        return {'depth': self.depth(l4), 'norm': n, 'edge': self.edge(l4)}
         # return {'depth': self.depth(x), 'norm': self.normal(x)}
 
 

@@ -72,8 +72,7 @@ class Model:
             self.criterionGAN = networks.GANLoss().to(self.device)
             self.criterionDepth1 = torch.nn.MSELoss().to(self.device)
             self.criterionNorm = torch.nn.CosineEmbeddingLoss().to(self.device)
-            # define during running, rely on data weight
-            self.criterionEdge = None
+            self.criterionEdge =  torch.nn.BCELoss().to(self.device)
 
             ## optimizers
             self.lr = cfg['LR']
@@ -165,12 +164,10 @@ class Model:
         self.loss_norm = self.cfg['NORM_WEIGHT'] * self.criterionNorm(_pred, _gt, cos_label)
 
         # # edge
-        # weight_e = (self.task_pred['edge'].size(2) * self.task_pred['edge'].size(3) - self.input_syn_edge_count ) / self.input_syn_edge_count
-        # self.criterionEdge = torch.nn.BCEWithLogitsLoss(weight=weight_e.float().view(-1,1,1,1)).to(self.device)
-        # self.loss_edge = self.cfg['EDGE_WEIGHT'] * self.criterionEdge(self.task_pred['edge'], self.input_syn_edge)
+        self.loss_edge = self.cfg['EDGE_WEIGHT'] * self.criterionEdge(self.task_pred['edge'], self.input_syn_edge)
 
         ## combined loss
-        loss = self.loss_dep + self.loss_norm # + self.loss_edge
+        loss = self.loss_dep + self.loss_norm + self.loss_edge
 
         if self.cfg['USE_DA']:
             pred_syn = self.netD(self.feat_syn[self.cfg['DA_LAYER']].detach())

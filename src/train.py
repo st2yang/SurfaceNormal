@@ -92,21 +92,21 @@ if __name__ == '__main__':
     dataiterator_train = iter(dataloader_train)
     print('==> Number of training images: %d.' % len(data_train))
 
-    nyud_test = GameDataset(cfg, normalize, train=False, test_data='nyud')
-    dataloader_nyud_test = torch.utils.data.DataLoader(nyud_test, num_workers=cfg['NUM_WORKER'],
-                                                       batch_size=1, shuffle=False)
-    dataiterator_nyud_test = iter(dataloader_nyud_test)
-    print('==> Number of nyud test images: %d.' % len(nyud_test))
+    # nyud_test = GameDataset(cfg, normalize, train=False, test_data='nyud')
+    # dataloader_nyud_test = torch.utils.data.DataLoader(nyud_test, num_workers=cfg['NUM_WORKER'],
+    #                                                    batch_size=1, shuffle=False)
+    # dataiterator_nyud_test = iter(dataloader_nyud_test)
+    # print('==> Number of nyud test images: %d.' % len(nyud_test))
 
     scenenet_test = GameDataset(cfg, normalize, train=False, test_data='scenenet')
     dataloader_scenenet_test = torch.utils.data.DataLoader(scenenet_test, num_workers=cfg['NUM_WORKER'],
                                                            batch_size=cfg['BATCH_SIZE'], shuffle=False)
     print('==> Number of scenenet test images: %d.' % len(scenenet_test))
 
-    scannet_test = GameDataset(cfg, normalize, train=False, test_data='scannet')
-    dataloader_scannet_test = torch.utils.data.DataLoader(scannet_test, num_workers=cfg['NUM_WORKER'],
-                                                          batch_size=cfg['BATCH_SIZE'], shuffle=False)
-    print('==> Number of scannet test images: %d.' % len(scannet_test))
+    # scannet_test = GameDataset(cfg, normalize, train=False, test_data='scannet')
+    # dataloader_scannet_test = torch.utils.data.DataLoader(scannet_test, num_workers=cfg['NUM_WORKER'],
+    #                                                       batch_size=cfg['BATCH_SIZE'], shuffle=False)
+    # print('==> Number of scannet test images: %d.' % len(scannet_test))
 
     if cfg['USE_DA']:
         data_real = torchvision.datasets.ImageFolder(cfg['REAL_DIR'],
@@ -122,7 +122,7 @@ if __name__ == '__main__':
     ## Get model
     model = Model()
     model.initialize(cfg)
-    model.load_networks(which_epoch=cfg['EPOCH_LOAD'])
+    # model.load_networks(which_epoch=cfg['EPOCH_LOAD'])
     metrics_dir = os.path.join(model.save_dir, 'metrics')
     if not os.path.isdir(metrics_dir):
         os.makedirs(metrics_dir)
@@ -152,44 +152,44 @@ if __name__ == '__main__':
         if (epoch+1) % cfg['SAVE_FREQ'] == 0:
             model.save_networks(epoch)
             # evaluate the model on the nyud test data
-            nyud_count = 0
-            nyud_inputs = {}
-            nyud_ratios_11 = []
-            nyud_ratios_22 = []
-            nyud_ratios_30 = []
-            nyud_ratios_45 = []
-            nyud_batch_sizes = []
-            nyud_pixel_errors = np.array([])
-
-            while True:
-                try:
-                    nyud_inputs['syn'] = next(dataiterator_nyud_test)
-                except StopIteration:
-                    dataiterator_nyud_test = iter(dataloader_nyud_test)
-                    break
-
-                ## save to file
-                model.set_input(nyud_inputs)
-                nyud_test_results = model.test()
-                nyud_ratios_11.append(nyud_test_results['ratio_11'])
-                nyud_ratios_22.append(nyud_test_results['ratio_22'])
-                nyud_ratios_30.append(nyud_test_results['ratio_30'])
-                nyud_ratios_45.append(nyud_test_results['ratio_45'])
-                nyud_pixel_errors = np.append(nyud_pixel_errors, nyud_test_results['pixel_error'])
-                model.out_logic_map(epoch_num=epoch, img_num=nyud_count)
-                nyud_count += 1
-            nyud_metrics = {}
-            nyud_metrics['mean'] = np.mean(nyud_pixel_errors)
-            nyud_metrics['median'] = np.median(nyud_pixel_errors)
-            nyud_metrics['11.25'] = np.average(np.array(nyud_ratios_11))
-            nyud_metrics['22.5'] = np.average(np.array(nyud_ratios_22))
-            nyud_metrics['30'] = np.average(np.array(nyud_ratios_30))
-            nyud_metrics['45'] = np.average(np.array(nyud_ratios_45))
-            np.save(os.path.join(metrics_dir, 'results_nyud_ep{}'.format(epoch)), nyud_metrics)
-            print('nyud test metrics: ', nyud_metrics)
+            # nyud_count = 0
+            # nyud_inputs = {}
+            # nyud_ratios_11 = []
+            # nyud_ratios_22 = []
+            # nyud_ratios_30 = []
+            # nyud_ratios_45 = []
+            # nyud_batch_sizes = []
+            # nyud_pixel_errors = np.array([])
+            #
+            # while True:
+            #     try:
+            #         nyud_inputs['syn'] = next(dataiterator_nyud_test)
+            #     except StopIteration:
+            #         dataiterator_nyud_test = iter(dataloader_nyud_test)
+            #         break
+            #
+            #     ## save to file
+            #     model.set_input(nyud_inputs)
+            #     nyud_test_results = model.test()
+            #     nyud_ratios_11.append(nyud_test_results['ratio_11'])
+            #     nyud_ratios_22.append(nyud_test_results['ratio_22'])
+            #     nyud_ratios_30.append(nyud_test_results['ratio_30'])
+            #     nyud_ratios_45.append(nyud_test_results['ratio_45'])
+            #     nyud_pixel_errors = np.append(nyud_pixel_errors, nyud_test_results['pixel_error'])
+            #     model.out_logic_map(epoch_num=epoch, img_num=nyud_count)
+            #     nyud_count += 1
+            # nyud_metrics = {}
+            # nyud_metrics['mean'] = np.mean(nyud_pixel_errors)
+            # nyud_metrics['median'] = np.median(nyud_pixel_errors)
+            # nyud_metrics['11.25'] = np.average(np.array(nyud_ratios_11))
+            # nyud_metrics['22.5'] = np.average(np.array(nyud_ratios_22))
+            # nyud_metrics['30'] = np.average(np.array(nyud_ratios_30))
+            # nyud_metrics['45'] = np.average(np.array(nyud_ratios_45))
+            # np.save(os.path.join(metrics_dir, 'results_nyud_ep{}'.format(epoch)), nyud_metrics)
+            # print('nyud test metrics: ', nyud_metrics)
 
             evaluation_metrics(model, 'scenenet', dataloader_scenenet_test, metrics_dir, epoch)
-            evaluation_metrics(model, 'scannet', dataloader_scannet_test, metrics_dir, epoch)
+            # evaluation_metrics(model, 'scannet', dataloader_scannet_test, metrics_dir, epoch)
 
     print('==> Finished Training')
     del dataiterator_train
