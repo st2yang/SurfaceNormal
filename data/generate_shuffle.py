@@ -167,10 +167,10 @@ import random
 
 #################################
 # scenenet
-data_path = '/home/marsyang/Documents/Dataset/scenenet_test/train/'
+data_path = '/home/marsyang/Documents/Dataset/scenenet/train/'
 
-start_fld = 0
-end_fld = 899
+start_fld = 899
+end_fld = 1000
 file_names = []
 
 for fld in range(start_fld, end_fld):
