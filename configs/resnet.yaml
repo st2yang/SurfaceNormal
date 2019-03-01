@@ -8,8 +8,8 @@ NUM_WORKER: 16
 ## Input
 GRAY: False
 CROP_SIZE: 224
-TRAIN_FILE: ../data/temp_train.txt
-SCENET_TEST: ../data/temp_test.txt
+TRAIN_FILE: ../data/scenenet1000_train.txt
+SCENET_TEST: ../data/scenenet1000_test.txt
 NYUD_TEST: ../data/nyud_test.txt
 SCANNET_TEST: ../data/scannet_test.txt
 
