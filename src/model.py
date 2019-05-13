@@ -71,7 +71,6 @@ class Model:
             ## loss
             self.criterionGAN = networks.GANLoss().to(self.device)
             self.criterionDepth1 = torch.nn.MSELoss().to(self.device)
-            self.criterionDepth1_noreduction = torch.nn.MSELoss(reduction='none').to(self.device)
             self.criterionNorm = torch.nn.CosineEmbeddingLoss().to(self.device)
             self.criterionEdge =  torch.nn.BCELoss().to(self.device)
 
@@ -146,19 +145,12 @@ class Model:
                                    self.feat_syn['layer3'],
                                    self.feat_syn['layer4'])
 
-        # masking all points that has depth < 1m -- log(depth) < 0
-        mask_distance = torch.ge(self.task_pred['depth'], torch.zeros_like(self.task_pred['depth'], device=self.device))
-        mask_distance = mask_distance.to(device=self.device, dtype=torch.float32)
-
         # depth
         depth_diff = self.task_pred['depth'] - self.input_syn_dep
-        depth_diff.mul(mask_distance)
         _n = self.task_pred['depth'].size(0) * self.task_pred['depth'].size(2) * self.task_pred['depth'].size(3)
         loss_depth2 = depth_diff.sum().pow_(2).div_(_n).div_(_n)
-        #loss_depth1 = self.criterionDepth1(self.task_pred['depth'], self.input_syn_dep)
-        loss_depth1 = self.criterionDepth1_noreduction(self.task_pred['depth'], self.input_syn_dep)
-        loss_depth1.mul_(mask_distance)
-        self.loss_dep = self.cfg['DEP_WEIGHT'] * (loss_depth1.mean() - loss_depth2) * 0.5
+        loss_depth1 = self.criterionDepth1(self.task_pred['depth'], self.input_syn_dep)
+        self.loss_dep = self.cfg['DEP_WEIGHT'] * (loss_depth1 - loss_depth2) * 0.5
 
         # surface normal
         ch = self.task_pred['norm'].size(1)
@@ -169,10 +161,7 @@ class Model:
         self.task_pred['norm'] = _pred.view(self.task_pred['norm'].size(0), self.task_pred['norm'].size(2), self.task_pred['norm'].size(3),3).permute(0, 3, 1, 2)
         self.task_pred['norm'] = (self.task_pred['norm'] + 1) * 127.5
         cos_label = torch.ones(_gt.size(0)).to(self.device)
-        # self.loss_norm = self.cfg['NORM_WEIGHT'] * self.criterionNorm(_pred, _gt, cos_label)
-        normal_diff = self.criterionNorm_eval(_pred, _gt, cos_label)
-        normal_diff.mul_(mask_distance.contiguous().view(-1))
-        self.loss_norm = self.cfg['NORM_WEIGHT'] * normal_diff.mean()
+        self.loss_norm = self.cfg['NORM_WEIGHT'] * self.criterionNorm(_pred, _gt, cos_label)
 
         # # edge
         self.loss_edge = self.cfg['EDGE_WEIGHT'] * self.criterionEdge(self.task_pred['edge'], self.input_syn_edge)
@@ -181,7 +170,7 @@ class Model:
         loss = self.loss_dep + self.loss_norm + self.loss_edge
 
         if self.cfg['USE_DA']:
-            pred_syn = self.netD(self.feat_syn[self.cfg['DA_LAYER']].detach())
+            pred_syn = self.netD(self.feat_syn[self.cfg['DA_LAYER']])
             self.loss_DA = self.criterionGAN(pred_syn, True)
             loss += self.loss_DA * self.cfg['DA_WEIGHT']
 
