@@ -184,6 +184,7 @@ class GameDataset(torch.utils.data.Dataset):
         if self.norm:
             sample['color'] = sample['color'].float().div(255)
             sample['color'] = self.norm(sample['color'])
+        sample['color'] = torch.cat((sample['color'], sample['edge']), dim=0)
         return sample
 
 
